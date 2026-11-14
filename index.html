@@ -1231,7 +1231,7 @@ function renderSearch(){
   return getStandings(S.year).then(function(st){
     SEARCH_LIST=st.drivers.slice();
     var chips='',i;
-    for(i=0;i<Math.min(8,SEARCH_LIST.length);i++){
+    for(i=0;i<SEARCH_LIST.length;i++){
       var d=SEARCH_LIST[i];
       chips+='<button class="chip" data-act="openDriver" data-driver="'+esc(d.driverId)+'" data-code="'+esc(d.code)+'">'+
         '<span class="bar" style="background:'+teamColor(d.teamId)+'"></span>'+esc(d.code)+'</button>';
@@ -1255,7 +1255,7 @@ function onSearchInput(val){
   if(!box) return;
   var q=normalizeQ(val);
   if(!q){ box.innerHTML=''; return; }
-  var hits=SEARCH_LIST.filter(function(d){return matches(d,q);}).slice(0,14);
+  var hits=SEARCH_LIST.filter(function(d){return matches(d,q);});
   if(!hits.length){
     box.innerHTML='<div class="card"><div class="note"><b>검색 결과 없음</b>"'+esc(val)+'" 에 해당하는 드라이버가 없습니다.<br>영문 이니셜(NOR) 또는 한글 이름(노리스)으로 검색해 보세요.</div></div>';
     return;
