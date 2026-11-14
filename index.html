@@ -150,6 +150,16 @@ main{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:10px 12px
   font-variant-numeric:tabular-nums;letter-spacing:-.1px;line-height:1.15;white-space:nowrap}
 .tbl td.pt{font-weight:900;color:#fff;width:40px}
 .tbl td.pt.zero{color:var(--dim2);font-weight:700}
+/* 드라이버 상세 · 스프린트 주말 3행(그랑프리 헤더 / 스프린트 / 레이스) */
+.tbl td.gph{text-align:left;padding:7px 8px 5px 6px;border-top:1px solid #20242B;
+  border-bottom:1px solid rgba(255,255,255,.12)}
+.tbl td.gph .gpn{font-weight:700;font-size:12px;color:#F2F3F5;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.tbl td.gph .ln{margin-top:0}
+.tbl td.subd{text-align:left;padding-left:15px;padding-top:7px;padding-bottom:7px;
+  font-size:11.5px;font-weight:700;white-space:nowrap}
+.tbl tr.srow td{border-top:0;border-bottom:1px dashed rgba(255,255,255,.06)}
+.tbl tr.rrow td{border-top:0;border-bottom:1px solid var(--line)}
 .drv{display:flex;align-items:center;gap:7px;min-width:0}
 .bar{width:3px;height:20px;border-radius:2px;flex:0 0 3px}
 .code{font-weight:900;font-size:12.5px;letter-spacing:.03em}
@@ -1481,15 +1491,17 @@ function renderDriver(){
       var cls=c.rPos===1?'p1':c.rPos===2?'p2':c.rPos===3?'p3':'';
       if(c.hasSprint){
         var sTxt=c.sPos?String(c.sPos):'—';
-        var sCls=c.sPos===1?'p1':c.sPos===2?'p2':c.sPos===3?'p3':'';
-        h+='<tr class="'+sCls+'"><td class="p" rowspan="2" style="vertical-align:middle;border-bottom:1px solid var(--line)">'+c.round+'</td>'+
-          '<td class="d" style="border-bottom:1px dashed rgba(255,255,255,.07)"><div style="font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:165px">'+esc(gpKo(c.race))+'</div>'+
-          '<div class="ln" style="color:#F59E0B">스프린트 결과 · '+esc(fmtDate(c.race.date))+'</div></td>'+
-          '<td style="border-bottom:1px dashed rgba(255,255,255,.07)">'+esc(c.sGrid?String(c.sGrid):'—')+'</td>'+
-          '<td style="font-weight:800;border-bottom:1px dashed rgba(255,255,255,.07);color:'+(c.sPos&&c.sPos<=3?'#fff':'#D3D8DF')+'">'+esc(sTxt)+'</td>'+
-          '<td class="pt'+(c.sPts?'':' zero')+'" style="border-bottom:1px dashed rgba(255,255,255,.07)">'+c.sPts+'</td></tr>';
-        h+='<tr class="'+cls+'">'+
-          '<td class="d"><div class="ln" style="color:#E5E7EB;font-weight:600">레이스 결과</div></td>'+
+        /* 1행: 그랑프리 헤더(아래 밑줄) + 라운드 번호 rowspan 3 */
+        h+='<tr class="'+cls+'"><td class="p" rowspan="3" style="vertical-align:middle;border-bottom:1px solid var(--line)">'+c.round+'</td>'+
+          '<td class="gph" colspan="4"><div class="gpn">'+esc(gpKo(c.race))+'</div>'+
+          '<div class="ln">'+esc(fmtDate(c.race.date))+'</div></td></tr>';
+        /* 2행: 스프린트 */
+        h+='<tr class="srow"><td class="subd" style="color:#F59E0B">스프린트</td>'+
+          '<td>'+esc(c.sGrid?String(c.sGrid):'—')+'</td>'+
+          '<td style="font-weight:800;color:'+(c.sPos&&c.sPos<=3?'#fff':'#D3D8DF')+'">'+esc(sTxt)+'</td>'+
+          '<td class="pt'+(c.sPts?'':' zero')+'">'+c.sPts+'</td></tr>';
+        /* 3행: 레이스 */
+        h+='<tr class="rrow"><td class="subd" style="color:#E5E7EB">레이스</td>'+
           '<td>'+esc(c.qPos?String(c.qPos):'—')+'</td>'+
           '<td style="font-weight:800;color:'+(c.rPos&&c.rPos<=3?'#fff':'#D3D8DF')+'">'+esc(rTxt)+'</td>'+
           '<td class="pt'+(c.rPts?'':' zero')+'">'+c.rPts+'</td></tr>';
@@ -1503,7 +1515,7 @@ function renderDriver(){
       }
     }
     h+='</tbody></table></div>';
-    h+='<div class="footnote">Q 예선/그리드 순위 · 결과(스프린트/레이스 순위) · PTS 획득 포인트<br>'+S.year+' 시즌 완료 라운드 기준</div>';
+    h+='<div class="footnote">Q 예선/그리드 순위 · 스프린트/레이스 순위 · PTS 획득 포인트<br>'+S.year+' 시즌 완료 라운드 기준</div>';
     MAIN.innerHTML=h;
   }).catch(function(e){ MAIN.innerHTML=errBox(e.message||String(e)); });
 }
