@@ -1228,18 +1228,51 @@ function renderStandings(){
 /* ============================ 렌더: 검색 ============================ */
 function renderSearch(){
   MAIN.innerHTML=skeleton(4);
-  return getStandings(S.year).then(function(st){
-    SEARCH_LIST=st.drivers.slice();
-    var chips='',i;
-    for(i=0;i<SEARCH_LIST.length;i++){
-      var d=SEARCH_LIST[i];
-      chips+='<button class="chip" data-act="openDriver" data-driver="'+esc(d.driverId)+'" data-code="'+esc(d.code)+'">'+
+  var prevRank={},curRank={},i;
+  function sortSearchList(){
+    /* 1순위 베르스타펜 · 2순위 직전 연도 순위 · 3순위(루키) 올해 순위 */
+    SEARCH_LIST.sort(function(a,b){
+      var at=a.driverId==='max_verstappen'?0:(prevRank[a.driverId]?1:2);
+      var bt=b.driverId==='max_verstappen'?0:(prevRank[b.driverId]?1:2);
+      if(at!==bt) return at-bt;
+      var ar=at===1?prevRank[a.driverId]:(at===2?(curRank[a.driverId]||999):0);
+      var br=bt===1?prevRank[b.driverId]:(bt===2?(curRank[b.driverId]||999):0);
+      return ar-br;
+    });
+  }
+  function chipHTML(){
+    var out='',k,d;
+    for(k=0;k<SEARCH_LIST.length;k++){
+      d=SEARCH_LIST[k];
+      out+='<button class="chip" data-act="openDriver" data-driver="'+esc(d.driverId)+'" data-code="'+esc(d.code)+'">'+
         '<span class="bar" style="background:'+teamColor(d.teamId)+'"></span>'+esc(d.code)+'</button>';
     }
+    return out;
+  }
+  return getStandings(S.year).then(function(st){
+    SEARCH_LIST=st.drivers.slice();
+    for(i=0;i<SEARCH_LIST.length;i++) curRank[SEARCH_LIST[i].driverId]=SEARCH_LIST[i].pos||(i+1);
+    sortSearchList();
+    var chips=chipHTML();
     MAIN.innerHTML='<div class="secttl">드라이버 검색 <span class="dim">'+S.year+' 시즌 전체 성적</span></div>'+
       '<div class="searchbox"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'+
       '<input id="q" type="search" inputmode="search" autocomplete="off" placeholder="노리스 · NOR · 베르스타펜 · 안토넬리" value=""></div>'+
       '<div class="chips">'+chips+'</div><div id="sres"></div>';
+    /* 직전 연도 순위를 받아오면 칩 순서를 다시 정렬 (실패하면 올해 순위 유지) */
+    getStandings(S.year-1).then(function(prev){
+      if(!prev || !prev.drivers || !prev.drivers.length) return;
+      var k,pd;
+      for(k=0;k<prev.drivers.length;k++){
+        pd=prev.drivers[k];
+        if(pd && pd.driverId) prevRank[pd.driverId]=pd.pos||(k+1);
+      }
+      sortSearchList();
+      var box=document.querySelector('#main .chips');
+      if(!box) return;
+      box.innerHTML=chipHTML();
+      var q=document.getElementById('q');
+      if(q && q.value) onSearchInput(q.value);
+    },function(){});
   }).catch(function(e){ MAIN.innerHTML=errBox(e.message||String(e)); });
 }
 function normalizeQ(s){ return String(s||'').toLowerCase().replace(/\s+/g,''); }
