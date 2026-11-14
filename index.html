@@ -192,16 +192,20 @@ main{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:10px 12px
   border:1px solid var(--line2);color:#fff;font-weight:800;font-size:12px}
 
 /* ---------- schedule list ---------- */
-.rowitem{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border-top:1px solid #20242B;transition:.12s}
+.rowitem{display:flex;align-items:center;gap:7px;width:100%;padding:11px 12px;border-top:1px solid #20242B;transition:.12s}
 .rowitem:first-child{border-top:0}
 .rowitem:active{background:#1E222A}
-.rn{width:24px;flex:0 0 auto;text-align:center;font-weight:900;font-size:12px;color:var(--dim2);font-variant-numeric:tabular-nums}
+.rn{width:22px;flex:0 0 auto;text-align:center;font-weight:900;font-size:12px;color:var(--dim2);font-variant-numeric:tabular-nums}
 .ri-main{flex:1;min-width:0}
-.ri-top{display:flex;align-items:center;gap:6px;font-weight:800;font-size:13px;white-space:nowrap;overflow:hidden}
+.ri-top{display:flex;align-items:center;gap:5px;font-weight:800;font-size:13px;white-space:nowrap;overflow:hidden}
 .ri-sub{display:block;color:var(--dim2);font-size:10.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ri-right{flex:0 0 auto;display:flex;align-items:center;gap:5px}
-.winc{width:3px;height:14px;border-radius:2px}
-.win{font-weight:900;font-size:11.5px;color:var(--dim)}
+.ri-right{flex:0 0 auto;display:flex;align-items:center;gap:4px}
+.pd{display:flex;gap:4px;align-items:center;flex:0 0 auto}
+.pdb{background:#1E222A;border:1px solid var(--line);border-radius:999px;padding:3px 6px;
+  display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.pdb .pn{font-size:10.5px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums}
+.pdb .pb{width:2.5px;height:10px;border-radius:2px;flex:0 0 auto}
+.pdb .pc{font-size:10.5px;font-weight:900;color:var(--txt)}
 .chev{color:var(--dim2);font-size:15px;font-weight:700}
 @media(min-width:700px){.list{display:grid;grid-template-columns:1fr 1fr}.rowitem{border-top:1px solid #20242B}
  .list .rowitem:nth-child(2){border-top:0}.list .rowitem:nth-child(odd){border-right:1px solid #20242B}}
@@ -1506,22 +1510,60 @@ function practiceTable(rows,race){
 }
 
 /* ============================ 렌더: 일정 ============================ */
-function winCell(win){
-  return win
-    ? '<span class="winc" style="background:'+teamColor(win.teamId)+'"></span><span class="win">'+esc(win.code)+'</span>'
-    : '<span class="chev">›</span>';
+/* 원본 결과 행 → 포디움 1·2·3위 [{pos,code,teamId}] */
+function podiumOf(rows){
+  if(!rows || !rows.length) return null;
+  var out=[],i,r,d,c,p;
+  for(i=0;i<rows.length;i++){
+    r=rows[i];d=r.Driver||{};c=r.Constructor||{};
+    p=num(r.position);
+    if(!(p>=1 && p<=3)) continue;
+    out.push({pos:p,code:(d.code||String(d.familyName||'').slice(0,3).toUpperCase()||''),teamId:c.constructorId||''});
+  }
+  if(!out.length){
+    for(i=0;i<rows.length && i<3;i++){
+      r=rows[i];d=r.Driver||{};c=r.Constructor||{};
+      out.push({pos:i+1,code:(d.code||String(d.familyName||'').slice(0,3).toUpperCase()||''),teamId:c.constructorId||''});
+    }
+  }
+  out.sort(function(a,b){return a.pos-b.pos;});
+  return out.length?out.slice(0,3):null;
 }
-/* 연도와 상관없이 끝난 그랑프리의 우승자를 일정 목록에 채운다(시즌 맵은 한 번만 불러온다) */
+/* 동기적으로 볼 수 있는 값만으로 포디움을 찾는다(내장 캐시 → 시즌 맵 → 라운드 캐시) */
+function peekPodium(year,round){
+  var s=SEASONS[year],pod=null;
+  if(year===CACHE.year && CACHE.results && CACHE.results[String(round)]) pod=podiumOf(CACHE.results[String(round)]);
+  if(!pod && s && s.all && s.all.race && s.all.race[String(round)]) pod=podiumOf(s.all.race[String(round)]);
+  if(!pod && s && s.rounds && s.rounds['race:'+round]) pod=podiumOf(s.rounds['race:'+round]);
+  return pod;
+}
+/* 오른쪽 영역: 가로 1줄 둥근 포디움 배지 3개 */
+function winCell(pod){
+  if(!pod || !pod.length) return '<span class="chev">›</span>';
+  var h='<span class="pd">';
+  for(var i=0;i<pod.length;i++){
+    var p=pod[i];
+    h+='<span class="pdb"><span class="pn">'+p.pos+'</span>'+
+       '<span class="pb" style="background:'+teamColor(p.teamId)+'"></span>'+
+       '<span class="pc">'+esc(p.code)+'</span></span>';
+  }
+  return h+'</span>';
+}
+/* 연도와 상관없이 끝난 그랑프리의 1·2·3위를 일정 목록에 채운다(시즌 맵은 한 번만 불러온다) */
 function fillScheduleWinners(){
-  var year=S.year,s=SEASONS[year],i;
+  var year=S.year,s=SEASONS[year],i,pod;
   if(!s || !s.races) return;
   var pending=0;
-  for(i=0;i<s.races.length;i++) if(isDone(s.races[i]) && !peekWinner(year,s.races[i].round)) pending++;
+  for(i=0;i<s.races.length;i++){
+    if(!isDone(s.races[i])) continue;
+    pod=peekPodium(year,s.races[i].round);
+    if(!pod || pod.length<3) pending++;
+  }
   if(!pending) return;
   getSeasonMap(year,'race').then(function(){
     if(S.year!==year || S.view!=='schedule') return;
     var nodes=MAIN.querySelectorAll('[data-win]');
-    for(i=0;i<nodes.length;i++) nodes[i].innerHTML=winCell(peekWinner(year,+nodes[i].getAttribute('data-win')));
+    for(i=0;i<nodes.length;i++) nodes[i].innerHTML=winCell(peekPodium(year,+nodes[i].getAttribute('data-win')));
   }).catch(function(){});
 }
 function renderSchedule(){
@@ -1529,13 +1571,13 @@ function renderSchedule(){
   return getRaces(S.year).then(function(races){
     var rows='',i;
     for(i=0;i<races.length;i++){
-      var r=races[i],done=isDone(r),win=done?peekWinner(S.year,r.round):null;
+      var r=races[i],done=isDone(r),pod=done?peekPodium(S.year,r.round):null;
       rows+='<button class="rowitem" data-act="openRace" data-round="'+r.round+'">'+
         '<span class="rn">'+r.round+'</span>'+
         '<span class="ri-main"><span class="ri-top">'+esc(gpKo(r))+
           (r.sprint?' <i class="badge sp">SPRINT</i>':'')+(done?'':' <i class="badge up">예정</i>')+
-        '</span><span class="ri-sub">'+esc(r.circuit)+' · '+fmtDate(r.date)+'</span></span>'+
-        '<span class="ri-right" data-win="'+r.round+'">'+winCell(win)+'</span></button>';
+        '</span><span class="ri-sub">'+fmtDate(r.date)+'</span></span>'+
+        '<span class="ri-right" data-win="'+r.round+'">'+winCell(pod)+'</span></button>';
     }
     MAIN.innerHTML='<div class="secttl">'+S.year+' 시즌 <span class="dim">'+races.length+'개 그랑프리 · 완료 '+races.filter(isDone).length+'</span></div>'+
       '<div class="card list">'+rows+'</div>'+
