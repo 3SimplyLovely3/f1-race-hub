@@ -165,6 +165,7 @@ main{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:10px 12px
 .bar{width:3px;height:20px;border-radius:2px;flex:0 0 3px}
 .code{font-weight:900;font-size:12.5px;letter-spacing:.03em}
 .ln{color:var(--dim);font-size:10px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ln.wrap{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.3;word-break:break-word}
 .fl{color:var(--purple);font-size:9px;font-weight:900;margin-left:4px;vertical-align:top}
 .dotd{color:var(--gold);font-size:9px;font-weight:900;margin-left:4px;vertical-align:top}
 .pos-txt{font-size:10px;color:var(--dim2);font-weight:700}
@@ -386,6 +387,17 @@ function pad2(n){return String(n).padStart(2,'0');}
 function num(v){var n=parseFloat(v);return isNaN(n)?0:n;}
 function teamColor(id){return TEAM_COLOR[id]||'#7A828E';}
 function teamKo(id,name){return TEAM_KO[id]||name||id||'—';}
+/* 2026 컨스트럭터 공식 풀네임(섀시 + 파워유닛) — F1 중계 표기와 동일 */
+var CTOR_FULL_2026={mercedes:'Mercedes',ferrari:'Ferrari',red_bull:'Red Bull Racing Red Bull Ford',
+  mclaren:'McLaren Mercedes',rb:'Racing Bulls Red Bull Ford',alpine:'Alpine Mercedes',
+  haas:'Haas Ferrari',audi:'Audi',williams:'Williams Mercedes',
+  aston_martin:'Aston Martin Honda',cadillac:'Cadillac Ferrari'};
+/* 2026 시즌은 공식 풀네임, 그 이전 시즌은 Jolpica 원본 컨스트럭터명 유지 */
+function ctorFullName(row,year){
+  var id=row&&row.teamId;
+  if(+year>=2026 && id && CTOR_FULL_2026[id]) return CTOR_FULL_2026[id];
+  return (row&&row.team)||'';
+}
 function gpKo(r){
   for(var i=0;i<GP_KO.length;i++){ if(GP_KO[i][0].test(r.name)) return GP_KO[i][1]+' GP'; }
   return r.name.replace(/\s*Grand Prix\s*$/i,'')+' GP';
@@ -420,6 +432,26 @@ function fullName(d){
   var f=d.familyName||d.last_name||'';
   var n=(g+' '+f).trim();
   return n||d.full_name||d.driverId||'';
+}
+/* 'Lando NORRIS'·'MAX VERSTAPPEN'처럼 일부만 대문자인 표기를 'Lando Norris'로 정리(이미 정상 표기는 그대로) */
+function nameCase(s){
+  return String(s==null?'':s).replace(/[^\s\-'’]+/g,function(w){
+    if(w===w.toUpperCase() && w!==w.toLowerCase()) return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase();
+    return w;
+  });
+}
+/* 카드/표의 작은 이름(.ln)용 풀네임: given+family 우선, 없으면 full/name에서 유도 (Lando Norris) */
+function drvFullName(d){
+  if(!d) return '';
+  var g=d.givenName||d.first_name||'',f=d.familyName||d.last_name||'';
+  if(g&&f) return nameCase(g+' '+f);
+  return nameCase(d.full||d.full_name||'')||nameCase(d.name||'');
+}
+/* 풀네임이 없거나 약어와 겹치면(같은 글자가 두 번 보이는 경우) 팀명으로 대체 */
+function subName(row){
+  var n=drvFullName(row);
+  if(!n || n.toUpperCase()===String(row.code||'').toUpperCase()) return row.team||'';
+  return n;
 }
 function sopts(ttl){return ttl;}
 
@@ -996,8 +1028,8 @@ function of1SessionResult(sessionKey,meetingKey){
       seen[acr]=1;
       return {
         pos:num(r.position),posText:String(r.position||''),
-        code:acr,driverId:'',name:lastName({familyName:(d.full_name||'').replace(/^.*\s/,''),full_name:d.full_name||''}),
-        full:d.full_name||acr,teamId:'',team:d.team_name||'',
+        code:acr,driverId:'',name:lastName({familyName:d.last_name||(d.full_name||'').replace(/^.*\s/,''),full_name:d.full_name||''}),
+        full:drvFullName(d)||acr,teamId:'',team:d.team_name||'',
         color:d.team_colour?('#'+String(d.team_colour).replace('#','')):null,
         time:Array.isArray(r.duration)?null:(r.duration==null?null:r.duration),
         segs:Array.isArray(r.duration)?r.duration:null,
@@ -1308,7 +1340,7 @@ function gridTable(){
     var gnum=+row.grid>0?+row.grid:0;
     var cls=gnum===1?'p1':gnum===2?'p2':gnum===3?'p3':'';
     h+='<tr class="'+cls+'"><td class="p" style="width:44px;font-size:12.5px">'+g+'</td>'+
-      '<td class="d">'+driverCell(row.code,row.name,row.teamId)+'</td>'+
+      '<td class="d">'+driverCell(row.code,subName(row),row.teamId)+'</td>'+
       '<td style="color:var(--dim)">'+(qp||'—')+'</td>'+
       '<td>'+(mode==='sprint'&&refEmpty?'<span class="delta eq">—</span>':deltaHtml(qp,+row.grid>0?+row.grid:rows.length))+'</td>'+
       '<td style="font-weight:800">'+res+'</td></tr>';
@@ -1353,7 +1385,7 @@ function raceTable(rows,race,label,dotd){
     var tcell=esc(t);
     if(row.flrank===1 && row.fl) tcell+='<span class="flt">'+esc(row.fl)+'</span>';
     h+='<tr class="'+pc.cls+'"><td class="p">'+pc.txt+'</td>'+
-      '<td class="d">'+driverCell(row.code,row.name,row.teamId,tw)+'</td>'+
+      '<td class="d">'+driverCell(row.code,subName(row),row.teamId,tw)+'</td>'+
       '<td>'+(row.laps!=null?esc(row.laps):'—')+'</td>'+
       '<td class="tm">'+tcell+'</td>'+
       '<td class="pt'+(row.points?'':' zero')+'">'+(row.points?row.points:'0')+'</td></tr>';
@@ -1369,7 +1401,7 @@ function qualiTable(rows,race){
   for(i=0;i<rows.length;i++){
     row=rows[i];pc=posCell(row);
     h+='<tr class="'+pc.cls+'"><td class="p">'+pc.txt+'</td>'+
-      '<td class="d">'+driverCell(row.code,row.name,row.teamId)+'</td>'+
+      '<td class="d">'+driverCell(row.code,subName(row),row.teamId)+'</td>'+
       '<td class="tm">'+esc(row.q1||'—')+'</td>'+
       '<td class="tm">'+esc(row.q2||'—')+'</td>'+
       '<td class="tm">'+esc(row.q3||'—')+'</td></tr>';
@@ -1386,7 +1418,7 @@ function sqTable(rows,race){
     var s=row.segs||[];
     var c1=s[0]!=null?lapTime(s[0]):'—',c2=s[1]!=null?lapTime(s[1]):'—',c3=s[2]!=null?lapTime(s[2]):'—';
     h+='<tr class="'+pc.cls+'"><td class="p">'+pc.txt+'</td>'+
-      '<td class="d">'+driverCell(row.code,row.name,row.teamId)+'</td>'+
+      '<td class="d">'+driverCell(row.code,subName(row),row.teamId)+'</td>'+
       '<td class="tm">'+esc(c1)+'</td><td class="tm">'+esc(c2)+'</td><td class="tm">'+esc(c3)+'</td></tr>';
   }
   return h+'</tbody></table></div>';
@@ -1401,7 +1433,7 @@ function practiceTable(rows,race){
     row=rows[i];pc=posCell(row);
     var col=row.color;
     var cell='<div class="drv"><span class="bar" style="background:'+(col||teamColor(''))+'"></span>'+
-      '<div style="min-width:0"><div class="code">'+esc(row.code)+'</div><div class="ln">'+esc(row.team||row.name)+'</div></div></div>';
+      '<div style="min-width:0"><div class="code">'+esc(row.code)+'</div><div class="ln">'+esc(subName(row))+'</div></div></div>';
     h+='<tr class="'+pc.cls+'"><td class="p">'+pc.txt+'</td><td class="d">'+cell+'</td>'+
       '<td class="tm">'+esc(lapTime(row.time))+'</td>'+
       '<td class="tm">'+esc(gapStr(row.gap))+'</td>'+
@@ -1480,7 +1512,7 @@ function renderStandings(){
         body+='<tr class="'+pc2.cls+'"><td class="p">'+pc2.txt+'</td>'+
           '<td class="d"><div class="drv"><span class="bar" style="background:'+teamColor(c.teamId)+'"></span>'+
           '<div style="min-width:0;flex:1"><div class="code">'+esc(teamKo(c.teamId,c.team))+'</div>'+
-          '<div class="ln">'+esc(c.team)+'</div></div>'+
+          '<div class="ln wrap">'+esc(ctorFullName(c,S.year))+'</div></div>'+
           '<div class="ptbar" style="width:46px"><i style="width:'+Math.max(4,Math.round(c.points/maxc*100))+'%;background:'+teamColor(c.teamId)+'"></i></div></div></td>'+
           '<td>'+c.wins+'</td><td class="pt">'+c.points+'</td></tr>';
       }
