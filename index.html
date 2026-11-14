@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>F1 레이스 허브</title>
+<title>SIMPLY LOVELY</title>
 <meta name="theme-color" content="#0F1014">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="F1 HUB">
+<meta name="apple-mobile-web-app-title" content="SIMPLY LOVELY">
 <meta name="description" content="F1 시즌 일정·세션별 결과·드라이버 시즌 성적을 한 화면에서 보는 모바일 웹 앱">
 <link rel="icon" type="image/png" sizes="180x180" href="apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -36,11 +36,9 @@ header{position:sticky;top:0;z-index:40;padding-top:calc(var(--safet) + 6px);
   background:rgba(15,16,20,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   border-bottom:1px solid rgba(255,255,255,.05)}
 .brand{display:flex;align-items:center;gap:10px;padding:11px 14px 8px}
-.mark{width:33px;height:33px;border-radius:9px;flex:0 0 auto;display:grid;place-items:center;
-  background:linear-gradient(150deg,#FF2A20,#C50500);box-shadow:0 6px 18px rgba(225,6,0,.40);
-  font-weight:900;font-size:14px;letter-spacing:-.06em;color:#fff;font-style:italic}
+.mark-img{width:34px;height:34px;border-radius:9px;flex:0 0 auto;object-fit:cover;display:block;border:1px solid rgba(255,255,255,.12)}
 .brand .tt{flex:1;min-width:0}
-.brand h1{margin:0;font-size:14.5px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+.brand h1{margin:0;font-size:14px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
 .brand .sub{color:var(--dim2);font-size:9.5px;letter-spacing:.2em;font-weight:800;margin-top:1px}
 .livebtn{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:800;letter-spacing:.06em;
   color:var(--dim);background:#1A1D24;border:1px solid var(--line);border-radius:999px;padding:5px 9px}
@@ -207,9 +205,9 @@ nav svg{color:var(--dim2)}
 <body>
 <header>
   <div class="brand">
-    <div class="mark">F1</div>
+    <img class="mark-img" src="apple-touch-icon.png" alt="SIMPLY LOVELY">
     <div class="tt">
-      <h1>Race Hub</h1>
+      <h1>SIMPLY LOVELY</h1>
       <div class="sub" id="hsub">FORMULA 1 SEASON CENTER</div>
     </div>
     <button class="livebtn" data-act="refresh"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/></svg>동기화</button>
