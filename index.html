@@ -184,6 +184,7 @@ main{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:10px 12px
 
 /* ---------- misc ---------- */
 .summary{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);
+  box-sizing:border-box;min-height:43px;
   background:linear-gradient(180deg,#1B1E26,#181A20);font-size:11.5px;color:var(--dim)}
 .summary b{color:#fff;font-weight:900}
 .summary .sp{flex:1}
@@ -353,11 +354,13 @@ var TEAM_COLOR={red_bull:'#3671C6',ferrari:'#E8002D',mercedes:'#27F4D2',mclaren:
   force_india:'#F596C8',alpha:'#8E1A2E',lotus_f1:'#FFB800',manor:'#6E7681',marussia:'#6E7681',caterham:'#00A551',
   brawn:'#B8FF4A',toyota:'#CC0000',bmw_sauber:'#293C6B',hrt:'#B0B0B0',virgin:'#E4002B',lotus_racing:'#FFB800'};
 
-/* OpenF1 연습주행 행은 teamId가 비어 있어 팀명으로 되돌린다 */
+/* OpenF1 연습주행·SQ 행은 teamId가 비어 있어 팀명으로 되돌린다 */
 function teamIdByName(n){
   var t=String(n||'').toLowerCase();
   if(!t) return '';
+  var yr=(typeof S!=='undefined'&&S.year)?+S.year:CUR_YEAR;
   if(t.indexOf('racing bulls')>=0) return 'rb';
+  if(t==='rb'||t.indexOf('rb f1')>=0) return 'rb';
   if(t.indexOf('red bull')>=0) return 'red_bull';
   if(t.indexOf('mercedes')>=0) return 'mercedes';
   if(t.indexOf('ferrari')>=0) return 'ferrari';
@@ -366,8 +369,9 @@ function teamIdByName(n){
   if(t.indexOf('alpine')>=0) return 'alpine';
   if(t.indexOf('williams')>=0) return 'williams';
   if(t.indexOf('haas')>=0) return 'haas';
-  if(t.indexOf('sauber')>=0||t.indexOf('audi')>=0||t.indexOf('kick')>=0) return 'audi';
+  if(t.indexOf('audi')>=0) return 'audi';
   if(t.indexOf('cadillac')>=0) return 'cadillac';
+  if(t.indexOf('sauber')>=0||t.indexOf('kick')>=0) return yr>=2026?'audi':'sauber';
   if(t.indexOf('alphatauri')>=0||t.indexOf('alpha tauri')>=0) return 'alphatauri';
   if(t.indexOf('toro rosso')>=0) return 'toro_rosso';
   if(t.indexOf('renault')>=0) return 'renault';
@@ -436,7 +440,19 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 function pad2(n){return String(n).padStart(2,'0');}
 function num(v){var n=parseFloat(v);return isNaN(n)?0:n;}
-function teamColor(id){return TEAM_COLOR[id]||'#7A828E';}
+function teamColor(id,name){
+  return TEAM_COLOR[id]||TEAM_COLOR[teamIdByName(name)]||'#7A828E';
+}
+/* 어느 세션이든 행 하나의 팀 컬러: teamId → 팀명 → OpenF1 team_colour 순서로 되돌린다.
+   (OpenF1 연습주행·SQ 행은 teamId가 비어 있어 예전엔 전부 회색으로 빠졌다) */
+function rowTeamColor(row){
+  if(!row) return '#7A828E';
+  var id=row.teamId||teamIdByName(row.team);
+  if(id&&TEAM_COLOR[id]) return TEAM_COLOR[id];
+  var c=row.color?String(row.color):'';
+  if(/^#[0-9a-fA-F]{6}$/.test(c)) return c;
+  return '#7A828E';
+}
 function teamKo(id,name){return TEAM_KO[id]||name||id||'—';}
 /* 2026 컨스트럭터 공식 풀네임(섀시 + 파워유닛) — F1 중계 표기와 동일 */
 var CTOR_FULL_2026={mercedes:'Mercedes',ferrari:'Ferrari',red_bull:'Red Bull Racing Red Bull Ford',
@@ -1086,8 +1102,8 @@ function of1SessionResult(sessionKey,meetingKey){
       return {
         pos:num(r.position),posText:String(r.position||''),
         code:acr,driverId:'',name:lastName({familyName:d.last_name||(d.full_name||'').replace(/^.*\s/,''),full_name:d.full_name||''}),
-        full:drvFullName(d)||acr,teamId:'',team:d.team_name||'',
-        color:d.team_colour?('#'+String(d.team_colour).replace('#','')):null,
+        full:drvFullName(d)||acr,teamId:teamIdByName(d.team_name||d.team||''),team:d.team_name||'',
+        color:TEAM_COLOR[teamIdByName(d.team_name||d.team||'')]||(d.team_colour?('#'+String(d.team_colour).replace('#','')):null),
         time:Array.isArray(r.duration)?null:(r.duration==null?null:r.duration),
         segs:Array.isArray(r.duration)?r.duration:null,
         gap:Array.isArray(r.gap_to_leader)?r.gap_to_leader[r.gap_to_leader.length-1]:r.gap_to_leader,
@@ -1473,7 +1489,7 @@ function sessionLabel(k){
 function winSum(label,row){
   if(!row) return '';
   return '<span class="wn"><span class="lb">'+esc(label)+'</span>'+
-    '<span class="bar" style="background:'+teamColor(row.teamId)+'"></span>'+
+    '<span class="bar" style="background:'+rowTeamColor(row)+'"></span>'+
     '<span class="nm">'+esc(subName(row))+'</span></span>';
 }
 function raceTable(rows,race,label,dotd){
@@ -1541,8 +1557,7 @@ function practiceTable(rows,race){
     '<table class="tbl fx"><colgroup>'+COL_FP+'</colgroup><thead><tr><th>P</th><th class="d">드라이버</th><th>베스트랩</th><th>갭</th><th>랩</th></tr></thead><tbody>';
   for(i=0;i<rows.length;i++){
     row=rows[i];pc=posCell(row);
-    var col=row.color;
-    var cell='<div class="drv"><span class="bar" style="background:'+(col||teamColor(''))+'"></span>'+
+    var cell='<div class="drv"><span class="bar" style="background:'+rowTeamColor(row)+'"></span>'+
       '<div style="min-width:0"><div class="code">'+esc(row.code)+'</div><div class="ln">'+esc(subName(row))+'</div></div></div>';
     h+='<tr class="'+pc.cls+'"><td class="p">'+pc.txt+'</td><td class="d">'+cell+'</td>'+
       '<td class="tm">'+esc(lapTime(row.time))+'</td>'+
