@@ -261,6 +261,9 @@ main{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:10px 12px
 .dhd .nm{font-size:20px;font-weight:900;letter-spacing:-.4px;line-height:1.15}
 .dhd .en{color:var(--dim2);font-size:11px;margin-top:3px;letter-spacing:.06em;font-weight:700}
 .dhd .tm2{display:flex;align-items:center;gap:6px;margin-top:9px;font-size:11.5px;color:var(--dim);font-weight:700}
+/* 생년월일 · 국기 국적 */
+.dhd .db{margin-top:3px;font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line)}
 /* 드라이버 상세: 우승·폴 포지션 좌우 2단 카드(제목에 숫자 없음, 0회는 -) */
 .hl{display:grid;grid-template-columns:1fr 1fr}
@@ -470,6 +473,48 @@ function rowTeamColor(row){
   return '#7A828E';
 }
 function teamKo(id,name){return TEAM_KO[id]||name||id||'—';}
+/* 드라이버 국적(Jolpica 원문 영문) → 국기 이모지 + 한글 국적. 역대 F1 출전 국적을 폭넓게 포괄,
+   매핑에 없는 국적은 원문 그대로(국기 없이) 안전하게 표시한다. */
+var NAT_KO={
+  dutch:'🇳🇱 네덜란드',british:'🇬🇧 영국',monegasque:'🇲🇨 모나코','monégasque':'🇲🇨 모나코',
+  spanish:'🇪🇸 스페인',australian:'🇦🇺 호주',italian:'🇮🇹 이탈리아',french:'🇫🇷 프랑스',
+  german:'🇩🇪 독일',japanese:'🇯🇵 일본',canadian:'🇨🇦 캐나다',thai:'🇹🇭 태국',
+  brazilian:'🇧🇷 브라질',argentine:'🇦🇷 아르헨티나','argentinian':'🇦🇷 아르헨티나',
+  'new zealander':'🇳🇿 뉴질랜드','newzealander':'🇳🇿 뉴질랜드',finnish:'🇫🇮 핀란드',
+  danish:'🇩🇰 덴마크',chinese:'🇨🇳 중국',mexican:'🇲🇽 멕시코',american:'🇺🇸 미국',
+  swiss:'🇨🇭 스위스',austrian:'🇦🇹 오스트리아',belgian:'🇧🇪 벨기에',polish:'🇵🇱 폴란드',
+  russian:'🇷🇺 러시아',soviet:'🇷🇺 러시아',swedish:'🇸🇪 스웨덴',venezuelan:'🇻🇪 베네수엘라',
+  indian:'🇮🇳 인도',indonesian:'🇮🇩 인도네시아',portuguese:'🇵🇹 포르투갈',
+  'south african':'🇿🇦 남아프리카공화국',irish:'🇮🇪 아일랜드',colombian:'🇨🇴 콜롬비아',
+  chilean:'🇨🇱 칠레',uruguayan:'🇺🇾 우루과이',malaysian:'🇲🇾 말레이시아',hungarian:'🇭🇺 헝가리',
+  czech:'🇨🇿 체코','czechoslovak':'🇨🇿 체코',turkish:'🇹🇷 튀르키예','emirati':'🇦🇪 아랍에미리트',
+  'united arab emirates':'🇦🇪 아랍에미리트',saudi:'🇸🇦 사우디아라비아','saudi arabian':'🇸🇦 사우디아라비아',
+  'liechtensteiner':'🇱🇮 리히텐슈타인',korean:'🇰🇷 대한민국','south korean':'🇰🇷 대한민국',
+  cypriot:'🇨🇾 키프로스',greek:'🇬🇷 그리스',ukrainian:'🇺🇦 우크라이나',estonian:'🇪🇪 에스토니아',
+  latvian:'🇱🇻 라트비아',lithuanian:'🇱🇹 리투아니아',norwegian:'🇳🇴 노르웨이',icelandic:'🇮🇸 아이슬란드',
+  israeli:'🇮🇱 이스라엘',lebanese:'🇱🇧 레바논',egyptian:'🇪🇬 이집트',moroccan:'🇲🇦 모로코',
+  tunisian:'🇹🇳 튀니지',singaporean:'🇸🇬 싱가포르',filipino:'🇵🇭 필리핀',taiwanese:'🇹🇼 대만',
+  'hong kong':'🇭🇰 홍콩','hongkong':'🇭🇰 홍콩',peruvian:'🇵🇪 페루',ecuadorian:'🇪🇨 에콰도르',
+  cuban:'🇨🇺 쿠바',bulgarian:'🇧🇬 불가리아',romanian:'🇷🇴 루마니아',serbian:'🇷🇸 세르비아',
+  croatian:'🇭🇷 크로아티아',slovenian:'🇸🇮 슬로베니아',slovak:'🇸🇰 슬로바키아',
+  zimbabwean:'🇿🇼 짐바브웨','rhodesian':'🇿🇼 짐바브웨',kenyan:'🇰🇪 케냐',nigerian:'🇳🇬 나이지리아',
+  barbadian:'🇧🇧 바베이도스',jamaican:'🇯🇲 자메이카','puerto rican':'🇵🇷 푸에르토리코',
+  guatemalan:'🇬🇹 과테말라',andorran:'🇦🇩 안도라',luxembourgish:'🇱🇺 룩셈부르크',
+  'east german':'🇩🇪 독일',liechtenstein:'🇱🇮 리히텐슈타인',bermudian:'🇧🇲 버뮤다',
+  bahraini:'🇧🇭 바레인',qatari:'🇶🇦 카타르',kuwaiti:'🇰🇼 쿠웨이트',jordanian:'🇯🇴 요르단',
+  argentinan:'🇦🇷 아르헨티나','san marinese':'🇸🇲 산마리노',sanmarinese:'🇸🇲 산마리노',
+  'united states':'🇺🇸 미국',usa:'🇺🇸 미국'
+};
+function natKo(nat){
+  var key=String(nat||'').trim().toLowerCase();
+  if(!key) return '';
+  return NAT_KO[key]||String(nat);   /* 매핑 없는 국적은 원문 그대로 */
+}
+function fmtDob(d){
+  var s=String(d||'').trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;   /* 형식이 다르면 있는 그대로 */
+  return s.replace(/-/g,'.');
+}
 /* 2026 컨스트럭터 공식 풀네임(섀시 + 파워유닛) — F1 중계 표기와 동일 */
 var CTOR_FULL_2026={mercedes:'Mercedes',ferrari:'Ferrari',red_bull:'Red Bull Racing Red Bull Ford',
   mclaren:'McLaren Mercedes',rb:'Racing Bulls Red Bull Ford',alpine:'Alpine Mercedes',
@@ -689,6 +734,7 @@ function normRaceRow(r){
     grid:r.grid,laps:r.laps,status:r.status||'',
     time:(r.Time&&r.Time.time)||'',millis:num(r.Time&&r.Time.millis),
     points:num(r.points),fl:(r.FastestLap&&r.FastestLap.Time&&r.FastestLap.Time.time)||'',
+    dob:(r.Driver&&r.Driver.dateOfBirth)||'',nat:(r.Driver&&r.Driver.nationality)||'',
     flrank:num(r.FastestLap&&r.FastestLap.rank)
   };
 }
@@ -703,7 +749,7 @@ function normStandRow(x){
   var ctor=(x.Constructors&&x.Constructors[0])||{};
   return {pos:num(x.position),posText:x.positionText||'',points:num(x.points),wins:num(x.wins),
     driverId:d.driverId||'',code:d.code||'',name:lastName(d),full:fullName(d),
-    given:d.givenName||'',permanent:d.permanentNumber||'',nationality:d.nationality||'',
+    given:d.givenName||'',permanent:d.permanentNumber||'',nationality:d.nationality||'',dob:d.dateOfBirth||'',
     teamId:ctor.constructorId||'',team:ctor.name||''};
 }
 function normCtorRow(x){
@@ -1801,6 +1847,7 @@ function renderDriver(){
     for(i=0;i<st.drivers.length;i++) if(st.drivers[i].driverId===did) d=st.drivers[i];
     var racesDone=races.filter(isDone);
     var wins=0,podiums=0,poles=0,rows='',spWins=0,points=0,lastTeamId='',lastTeam='';
+    var fbDob='',fbNat='';          /* 순위데이터에 생년월일·국적이 없을 때 결과 데이터에서 보충 */
     var cells=[];
     for(i=0;i<races.length;i++){
       var r=races[i];
@@ -1812,6 +1859,8 @@ function renderDriver(){
       var sPos=ss?num(ss.position):0,sPts=ss?num(ss.points):0,sGrid=ss?num(ss.grid):0;
       var qPos=qq?num(qq.position):0;
       if(rr&&rr.Constructor&&rr.Constructor.constructorId){ lastTeamId=rr.Constructor.constructorId; lastTeam=rr.Constructor.name||''; }
+      if(rr&&!fbDob&&rr.dob) fbDob=rr.dob;
+      if(rr&&!fbNat&&rr.nat) fbNat=rr.nat;
       if(rPos===1) wins++;
       if(rPos>=1&&rPos<=3) podiums++;
       if(sPos===1) spWins++;
@@ -1824,10 +1873,15 @@ function renderDriver(){
     var displayName=(d&&(DRV_KO_FULL[d.driverId]||d.full))||S.driverCode||did;
     var enName=(d&&d.full)||'';
     var pos=d?d.pos:'—',pts=d?d.points:points;
+    /* 생년월일 · 국기 국적 (없는 항목은 빼고, 둘 다 없으면 줄 자체를 생략) */
+    var dob=(d&&d.dob)||fbDob,nat=(d&&d.nationality)||fbNat,metaBits=[];
+    if(dob) metaBits.push(fmtDob(dob));
+    if(nat) metaBits.push(natKo(nat));
+    var metaLine=metaBits.length?'<div class="db">'+esc(metaBits.join(' · '))+'</div>':'';
     var h='<button class="back" data-act="nav" data-view="search">‹ 검색으로</button>'+
       '<div class="card"><div class="dhd"><div class="acc" style="background:'+teamColor(teamId)+'"></div>'+
       '<div class="nm">'+esc(displayName)+'</div>'+
-      '<div class="en">'+esc(enName)+' · '+esc((d&&d.code)||S.driverCode||'')+'</div>'+
+      '<div class="en">'+esc(enName)+' · '+esc((d&&d.code)||S.driverCode||'')+'</div>'+metaLine+
       '<div class="tm2"><span class="bar" style="background:'+teamColor(teamId)+';height:12px"></span>'+esc(teamKo(teamId,teamName))+' · '+S.year+' 시즌</div></div>'+
       '<div class="stats">'+
         '<div class="stat"><div class="v">'+esc(pos)+'</div><div class="k">순위</div></div>'+
@@ -1854,7 +1908,7 @@ function renderDriver(){
       }
       return '<div class="hlc"><div class="hlt '+titleCls+'">'+title+'</div>'+(out||'<div class="hle">-</div>')+'</div>';
     }
-    h+='<div class="card"><div class="hl">'+hlCol('g','🏆 우승',winList,'race')+hlCol('p','⏱️ 폴 포지션',poleList,'quali')+'</div></div>';
+    h+='<div class="card"><div class="hl">'+hlCol('p','⏱️ 폴 포지션',poleList,'quali')+hlCol('g','🏆 우승',winList,'race')+'</div></div>';
     // 라운드 테이블
     h+='<div class="card pad" style="margin-top:10px"><table class="tbl"><thead><tr>'+
       '<th>R</th><th class="d">그랑프리</th><th>Q</th><th>결과</th><th>PTS</th></tr></thead><tbody>';
