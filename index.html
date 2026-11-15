@@ -153,6 +153,9 @@ main{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:10px 12px
 .tbl td.tm .flt{display:block;color:var(--purple);font-size:10.5px;font-weight:700;margin-top:2px;
   font-variant-numeric:tabular-nums;letter-spacing:-.1px;line-height:1.15;white-space:nowrap}
 .tbl td.pt{font-weight:900;color:#fff;width:40px}
+/* 연습주행(FP1·FP2·FP3)·퀄리파잉·SQ: 세션 데이터 길이와 무관하게 열 폭·간격 고정(colgroup 값 사용) */
+.tbl.fx{table-layout:fixed}
+@media(max-width:360px){.tbl.fx th,.tbl.fx td{padding-left:4px;padding-right:4px}}
 .tbl td.pt.zero{color:var(--dim2);font-weight:700}
 /* 드라이버 상세 · 스프린트 주말 3행(그랑프리 헤더 / 스프린트 / 레이스) */
 .tbl td.gph{text-align:left;padding:7px 8px 5px 6px;border-top:1px solid #20242B;
@@ -1430,12 +1433,17 @@ function raceTable(rows,race,label,dotd){
   }
   return h+'</tbody></table></div>';
 }
+/* 연습주행·퀄리파잉 표의 고정 열 폭. 세션·데이터 길이가 달라도 P/기록/갭/랩 열의 x좌표가 1px도 달라지지 않는다.
+   (예전에는 table-layout:auto라 드라이버 이름 길이에 따라 베스트랩·갭 열 폭이 세션마다 달라졌다.)
+   드라이버 열은 남는 폭을 모두 가져간다(이름은 말줄임 처리됨). */
+var COL_FP='<col style="width:34px"><col><col style="width:22%"><col style="width:19.5%"><col style="width:9.5%">';
+var COL_Q='<col style="width:34px"><col><col style="width:19.5%"><col style="width:19.5%"><col style="width:19.5%">';
 function qualiTable(rows,race){
   var h='',i,row,pc,pole=rows[0];
   h+='<div class="card pad"><div class="summary"><span>퀄리파잉 결과</span><span class="sp"></span>'+
     '<span>폴 포지션 <b>'+esc(pole.code)+'</b></span>'+
     (pole.q3?'<span style="color:var(--dim2)">'+esc(pole.q3)+'</span>':'')+'</div>'+
-    '<table class="tbl"><thead><tr><th>P</th><th class="d">드라이버</th><th>Q1</th><th>Q2</th><th>Q3</th></tr></thead><tbody>';
+    '<table class="tbl fx"><colgroup>'+COL_Q+'</colgroup><thead><tr><th>P</th><th class="d">드라이버</th><th>Q1</th><th>Q2</th><th>Q3</th></tr></thead><tbody>';
   for(i=0;i<rows.length;i++){
     row=rows[i];pc=posCell(row);
     h+='<tr class="'+pc.cls+'"><td class="p">'+pc.txt+'</td>'+
@@ -1450,7 +1458,7 @@ function sqTable(rows,race){
   var h='',i,row,pc,top=rows[0];
   h+='<div class="card pad"><div class="summary"><span>스프린트 퀄리파잉</span><span class="sp"></span>'+
     '<span>스프린트 폴 <b>'+esc(top.code)+'</b></span></div>'+
-    '<table class="tbl"><thead><tr><th>P</th><th class="d">드라이버</th><th>SQ1</th><th>SQ2</th><th>SQ3</th></tr></thead><tbody>';
+    '<table class="tbl fx"><colgroup>'+COL_Q+'</colgroup><thead><tr><th>P</th><th class="d">드라이버</th><th>SQ1</th><th>SQ2</th><th>SQ3</th></tr></thead><tbody>';
   for(i=0;i<rows.length;i++){
     row=rows[i];pc=posCell(row);
     var s=row.segs||[];
@@ -1466,7 +1474,7 @@ function practiceTable(rows,race){
   h+='<div class="card pad"><div class="summary"><span>'+esc(sessionLabel(S.session))+' 기록</span><span class="sp"></span>'+
     '<span>1위 <b>'+esc(top.code)+'</b></span>'+
     (top.time!=null?'<span style="color:var(--dim2)">'+lapTime(top.time)+'</span>':'')+'</div>'+
-    '<table class="tbl"><thead><tr><th>P</th><th class="d">드라이버</th><th>베스트랩</th><th>갭</th><th>랩</th></tr></thead><tbody>';
+    '<table class="tbl fx"><colgroup>'+COL_FP+'</colgroup><thead><tr><th>P</th><th class="d">드라이버</th><th>베스트랩</th><th>갭</th><th>랩</th></tr></thead><tbody>';
   for(i=0;i<rows.length;i++){
     row=rows[i];pc=posCell(row);
     var col=row.color;
