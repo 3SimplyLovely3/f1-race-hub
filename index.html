@@ -641,7 +641,7 @@ function normRace(r){
   var iso=function(x){ return x && x.date ? (x.date+'T'+(x.time||'00:00:00Z')) : null; };
   return {
     round:+r.round,name:r.raceName,date:r.date,time:r.time||null,
-    circuit:c.circuitName||'',locality:loc.locality||'',country:loc.country||'',
+    circuitId:c.circuitId||'',circuit:c.circuitName||'',locality:loc.locality||'',country:loc.country||'',
     sprint:!!(r.Sprint||r.SprintShootout||r.SprintQualifying),
     fp1:iso(r.FirstPractice),fp2:iso(r.SecondPractice),fp3:iso(r.ThirdPractice),
     q:iso(r.Qualifying),sp:iso(r.Sprint)
@@ -1180,15 +1180,15 @@ function prevGpRound(year){
   if(y<YEARS[YEARS.length-1]) return Promise.resolve(null);
   return Promise.all([getRaces(year),getRaces(y)]).then(function(res){
     var cur=null,i,list=res[0]||[],prev=res[1]||[];
-    for(i=0;i<list.length;i++) if(String(list[i].round)===String(S.round)) cur=list[i];
+    for(i=0;i<list.length;i++) if(+list[i].round===+S.round) cur=list[i];
     if(!cur) return null;
-    var cid=((cur.Circuit||{}).circuitId)||'';
+    var cid=cur.circuitId||'';
     if(cid){
-      for(i=0;i<prev.length;i++) if((((prev[i].Circuit||{}).circuitId)||'')===cid && isDone(prev[i])) return prev[i].round;
+      for(i=0;i<prev.length;i++) if((prev[i].circuitId||'')===cid && isDone(prev[i])) return prev[i].round;
     }
-    var cn=normRaceName(cur.raceName);
+    var cn=normRaceName(cur.name);
     if(cn){
-      for(i=0;i<prev.length;i++) if(normRaceName(prev[i].raceName)===cn && isDone(prev[i])) return prev[i].round;
+      for(i=0;i<prev.length;i++) if(normRaceName(prev[i].name)===cn && isDone(prev[i])) return prev[i].round;
     }
     return null;
   }).catch(function(){ return null; });
