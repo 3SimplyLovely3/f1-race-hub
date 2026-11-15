@@ -1868,6 +1868,19 @@ function renderDriver(){
       points+=rPts+sPts;
       cells.push({round:r.round,race:r,rPos:rPos,rPts:rPts,qPos:qPos,sPos:sPos,sPts:sPts,sGrid:sGrid,hasSprint:!!ss,status:rr?rr.status:'',posText:rr?rr.positionText:'',sStatus:ss?ss.status:'',sPosText:ss?ss.positionText:''});
     }
+    // 그 연도에 출전 기록이 없으면(대뷔 전 시즌 등) 최신 경기로 올리지 않고 상세 화면 안에서 안내만 보여준다
+    if(!races.length){
+      MAIN.innerHTML='<button class="back" data-act="nav" data-view="search">‹ 검색으로</button>'+
+        errBox(S.year+' 시즌 경기 데이터를 불러오지 못했습니다.');
+      return Promise.resolve();
+    }
+    if(!d && !cells.length){
+      var nmKo=DRV_KO_FULL[did]||S.driverCode||did;
+      MAIN.innerHTML='<button class="back" data-act="nav" data-view="search">‹ 검색으로</button>'+
+        '<div class="card"><div class="note"><b>'+S.year+' 시즌 출전 기록이 없습니다</b>'+
+        esc(nmKo)+' · '+S.year+' 시즌에는 출전 기록이 없습니다.<br>상단에서 다른 연도를 선택하거나 검색으로 돌아가세요.</div></div>';
+      return Promise.resolve();
+    }
     // 팀 보정
     var teamId=(d&&d.teamId)||lastTeamId,teamName=(d&&d.team)||lastTeam;
     var displayName=(d&&(DRV_KO_FULL[d.driverId]||d.full))||S.driverCode||did;
@@ -1980,12 +1993,14 @@ function render(){
   if(S.view==='driver') return renderDriver();
   return renderRace();
 }
+/* 연도 칩: 지금 보고 있는 탭(최신 경기·일정·순위·드라이버 상세)을 그대로 유지한 채 연도만 바꾼다.
+   최신 경기 탭에서만 그 연도의 최신 라운드를 새로 고른다. */
 function switchYear(y){
   S.year=y;
   return getRaces(y).then(function(races){
+    /* 라운드·세션은 최신 경기 탭이 쓸 값만 그 연도 최신으로 맞춰 둔다(다른 탭 화면에는 영향 없음) */
     S.round=lastDoneRound(races);
     S.session='race';
-    S.view = (S.view==='standings'||S.view==='search'||S.view==='schedule') ? S.view : 'race';
     return render();
   }).catch(function(e){ renderYears(); MAIN.innerHTML=errBox(e.message||String(e)); });
 }
@@ -2018,7 +2033,7 @@ document.addEventListener('click',function(ev){
   if(!b) return;
   var act=b.getAttribute('data-act');
   try{
-    if(act==='year'){ if(+b.getAttribute('data-year')!==S.year){ GRID.data=null; S.gridMode='race'; BACK=[]; switchYear(+b.getAttribute('data-year')); } }
+    if(act==='year'){ if(+b.getAttribute('data-year')!==S.year){ GRID.data=null; S.gridMode='race'; if(S.view==='race') BACK=[]; switchYear(+b.getAttribute('data-year')); } }
     else if(act==='nav'){
       var v=b.getAttribute('data-view');
       BACK=[];
