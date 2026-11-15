@@ -1856,7 +1856,7 @@ function renderDriver(){
     var d=null,i;
     for(i=0;i<st.drivers.length;i++) if(st.drivers[i].driverId===did) d=st.drivers[i];
     var racesDone=races.filter(isDone);
-    var wins=0,podiums=0,poles=0,rows='',spWins=0,points=0,lastTeamId='',lastTeam='';
+    var wins=0,podiums=0,poles=0,rows='',spWins=0,points=0,fls=0,lastTeamId='',lastTeam='';
     var fbDob='',fbNat='';          /* 순위데이터에 생년월일·국적이 없을 때 결과 데이터에서 보충 */
     var cells=[],part=0;            /* part: 그 시즌에 실제로 출전한 라운드 수 */
     for(i=0;i<races.length;i++){
@@ -1875,6 +1875,8 @@ function renderDriver(){
       if(rPos>=1&&rPos<=3) podiums++;
       if(sPos===1) spWins++;
       if(qPos===1) poles++;
+      /* 패스티스트 랩: 레이스 결과 표의 보라색 FL 배지와 같은 기준(FastestLap.rank === 1) */
+      if(rr && num(rr.FastestLap&&rr.FastestLap.rank)===1) fls++;
       points+=rPts+sPts;
       if(rr||qq||ss) part++;
       cells.push({round:r.round,race:r,rPos:rPos,rPts:rPts,qPos:qPos,sPos:sPos,sPts:sPts,sGrid:sGrid,hasSprint:!!ss,status:rr?rr.status:'',posText:rr?rr.positionText:'',sStatus:ss?ss.status:'',sPosText:ss?ss.positionText:''});
@@ -1917,7 +1919,7 @@ function renderDriver(){
         '<div class="stat"><div class="v">'+poles+'</div><div class="k">폴</div></div>'+
         '<div class="stat"><div class="v">'+spWins+'</div><div class="k">스프린트 우승</div></div>'+
         '<div class="stat"><div class="v">'+racesDone.length+'</div><div class="k">출전 라운드</div></div>'+
-        '<div class="stat"><div class="v">'+(racesDone.length?((points/racesDone.length).toFixed(1)):'0')+'</div><div class="k">라운드 평균</div></div>'+
+        '<div class="stat"><div class="v">'+fls+'</div><div class="k">패스티스트 랩</div></div>'+
       '</div></div>';
     // 우승 & 폴 포지션: 좌우 2단 카드(숫자 표기 없음, 0회는 '-', 항상 렌더)
     var winList=[],poleList=[],wi;
