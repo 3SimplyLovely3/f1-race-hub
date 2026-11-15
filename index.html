@@ -313,6 +313,42 @@ nav svg{color:var(--dim2)}
 .err .kbd{display:inline-block;margin-top:12px;padding:8px 16px;border-radius:10px;background:#2A1A1A;
   border:1px solid #5A2A26;color:#fff;font-weight:800;font-size:12px}
 .footnote{text-align:center;color:var(--dim2);font-size:10px;padding:16px 8px 4px;line-height:1.7}
+
+/* ---------- 드라이버 1:1 비교 ---------- */
+.h2hpick{display:grid;grid-template-columns:1fr 16px 1fr;gap:6px;align-items:center;padding:10px}
+.h2hc{position:relative;display:block;width:100%;min-width:0;background:#1D2028;border:1px solid var(--line);
+  border-radius:13px;padding:9px 20px 10px 12px;text-align:left;transition:background .12s}
+.h2hc:active{background:#22262E}
+.h2hc .bar{position:absolute;left:0;top:9px;bottom:9px;height:auto;width:3px;border-radius:2px}
+.h2hc .cd{display:block;font-size:18px;font-weight:900;letter-spacing:.02em;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h2hc .nm{display:block;font-size:10.5px;color:var(--dim);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.h2hc .tm{display:block;font-size:10px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.h2hc .cv{position:absolute;right:8px;top:10px;color:var(--dim2);display:block;line-height:1}
+.h2hc .cv svg{width:9px;height:9px}
+.h2hvs{display:grid;place-items:center;font-size:9px;font-weight:900;color:var(--dim2);letter-spacing:.04em}
+.h2htools{display:flex;gap:6px;justify-content:center;padding:0 10px 11px}
+.h2htool{font-size:10.5px;font-weight:800;color:var(--dim);background:#1A1D24;border:1px solid var(--line);
+  border-radius:999px;padding:5px 10px;transition:.12s}
+.h2htool:active{color:#fff;border-color:var(--line2);background:#22262E}
+.h2hrow{padding:9px 12px 10px;border-top:1px solid var(--line)}
+.h2hrow:first-child{border-top:0}
+.h2htop{display:flex;align-items:center;gap:6px}
+.h2htop .v{font-size:16px;font-weight:900;font-variant-numeric:tabular-nums;min-width:36px;letter-spacing:-.3px}
+.h2htop .v.r{text-align:right}
+.h2htop .lb{flex:1;text-align:center;font-size:11px;font-weight:800;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h2hbar{display:flex;height:5px;border-radius:3px;overflow:hidden;background:#232830;margin-top:7px}
+.h2hbar i{display:block;height:100%}
+.h2hsm{font-size:9.5px;color:var(--dim2);font-weight:700;text-align:center;padding-top:5px}
+table.tbl.h2ht th.ca,table.tbl.h2ht td.ca,table.tbl.h2ht th.cb,table.tbl.h2ht td.cb{
+  width:47px;min-width:47px;text-align:center;padding:7px 4px}
+table.tbl.h2ht td.ca{padding-right:2px}
+table.tbl.h2ht th.ca{padding-right:2px;color:#DCE1E8}
+table.tbl.h2ht th.cb{color:#DCE1E8}
+.h2hpill{display:inline-block;min-width:31px;text-align:center;padding:2px 5px;border-radius:8px;
+  font-size:11.5px;font-weight:900;font-variant-numeric:tabular-nums;color:#fff;line-height:1.25}
+.h2hplain{font-size:12px;font-weight:800;color:#D3D8DF;font-variant-numeric:tabular-nums}
+.h2hplain.dim{color:var(--dim2);font-weight:700}
+.h2hnow{font-size:10.5px;color:var(--dim2);font-weight:700;text-align:center;padding:4px 12px 12px;line-height:1.6}
 .hide{display:none!important}
 </style>
 </head>
@@ -441,7 +477,7 @@ var GP_KO=[
   [/swiss/i,'스위스'],[/luxembourg/i,'룩셈부르크'],[/swedish/i,'스웨덴'],[/moroccan/i,'모로코']
 ];
 
-var S={year:CUR_YEAR,view:'race',round:0,session:'race',standingTab:'driver',driverId:null,driverCode:null,gridMode:'race'};
+var S={year:CUR_YEAR,view:'race',round:0,session:'race',standingTab:'driver',driverId:null,driverCode:null,gridMode:'race',driverTab:'search',h2hA:null,h2hB:null};
 /* 복귀 스택: '직전 연도 결과 ›'로 이동하기 전 상태({year,round,session})를 쌓는다.
    헤더의 '‹ {연도}' 버튼을 누르면 pop해서 그 화면으로 되돌아간다. 2026→2025→2024처럼 연속 이동 후 차례로 복귀 가능. */
 var BACK=[];
@@ -1765,8 +1801,16 @@ function renderStandings(){
 }
 
 /* ============================ 렌더: 검색 ============================ */
+/* 드라이버 탭 서브탭: [드라이버 검색] / [1:1 비교] (순위 탭 .seg와 같은 디자인) */
+function driverSeg(){
+  var t=S.driverTab||'search';
+  return '<div class="seg">'+
+    '<button class="'+(t==='search'?'on':'')+'" data-act="driverTab" data-tab="search">드라이버 검색</button>'+
+    '<button class="'+(t==='h2h'?'on':'')+'" data-act="driverTab" data-tab="h2h">1:1 비교</button></div>';
+}
 function renderSearch(){
-  MAIN.innerHTML=skeleton(4);
+  if(S.driverTab==='h2h') return renderH2H();
+  MAIN.innerHTML=driverSeg()+skeleton(4);
   var prevRank={},curRank={},i;
   function sortSearchList(){
     /* 1순위 베르스타펜 · 2순위 직전 연도 순위 · 3순위(루키) 올해 순위 */
@@ -1793,7 +1837,7 @@ function renderSearch(){
     for(i=0;i<SEARCH_LIST.length;i++) curRank[SEARCH_LIST[i].driverId]=SEARCH_LIST[i].pos||(i+1);
     sortSearchList();
     var chips=chipHTML();
-    MAIN.innerHTML='<div class="secttl">드라이버 검색 <span class="dim">'+S.year+' 시즌 전체 성적</span></div>'+
+    MAIN.innerHTML=driverSeg()+'<div class="secttl">드라이버 검색 <span class="dim">'+S.year+' 시즌 전체 성적</span></div>'+
       '<div class="searchbox"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'+
       '<input id="q" type="search" inputmode="search" autocomplete="off" placeholder="노리스 · NOR · 베르스타펜 · 안토넬리" value=""></div>'+
       '<div class="chips">'+chips+'</div><div id="sres"></div>';
@@ -1858,7 +1902,7 @@ function renderDriver(){
     var racesDone=races.filter(isDone);
     var wins=0,podiums=0,poles=0,rows='',spWins=0,points=0,fls=0,lastTeamId='',lastTeam='';
     var fbDob='',fbNat='';          /* 순위데이터에 생년월일·국적이 없을 때 결과 데이터에서 보충 */
-    var cells=[],part=0;            /* part: 그 시즌에 실제로 출전한 라운드 수 */
+    var cells=[],part=0;            /* part: 그 시즌에 실제로 엔트리가 있었던 라운드 수(레이스 결과·예선·스프린트 중 하나라도 있으면 카운트 → DNS·DNF·DNQ·DSQ 포함) */
     for(i=0;i<races.length;i++){
       var r=races[i];
       if(!isDone(r)) continue;
@@ -1918,7 +1962,7 @@ function renderDriver(){
       '<div class="stats" style="border-top:1px solid var(--line)">'+
         '<div class="stat"><div class="v">'+poles+'</div><div class="k">폴</div></div>'+
         '<div class="stat"><div class="v">'+spWins+'</div><div class="k">스프린트 우승</div></div>'+
-        '<div class="stat"><div class="v">'+racesDone.length+'</div><div class="k">출전 라운드</div></div>'+
+        '<div class="stat"><div class="v">'+part+'</div><div class="k">출전 라운드</div></div>'+
         '<div class="stat"><div class="v">'+fls+'</div><div class="k">패스티스트 랩</div></div>'+
       '</div></div>';
     // 우승 & 폴 포지션: 좌우 2단 카드(숫자 표기 없음, 0회는 '-', 항상 렌더)
@@ -1973,6 +2017,222 @@ function renderDriver(){
     h+='<div class="footnote">Q 예선/그리드 순위 · 스프린트/레이스 순위 · PTS 획득 포인트<br>'+S.year+' 시즌 완료 라운드 기준</div>';
     MAIN.innerHTML=h;
   }).catch(function(e){ MAIN.innerHTML=errBox(e.message||String(e)); });
+}
+
+/* ============================ 렌더: 드라이버 1:1 비교 ============================ */
+function hexRgb(h){
+  h=String(h||'').replace('#','');
+  if(h.length===3) h=h.charAt(0)+h.charAt(0)+h.charAt(1)+h.charAt(1)+h.charAt(2)+h.charAt(2);
+  if(!/^[0-9a-fA-F]{6}$/.test(h)) return [122,130,142];
+  return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)];
+}
+function rgbaHex(h,a){ var c=hexRgb(h); return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'; }
+/* 같은 팀끼리 비교할 때 오른쪽 막대를 흰색 쪽으로 밝혀 구분한다 */
+function mixHex(h,amt){
+  var c=hexRgb(h),r=Math.round(c[0]+(255-c[0])*amt),g=Math.round(c[1]+(255-c[1])*amt),b=Math.round(c[2]+(255-c[2])*amt);
+  return 'rgb('+r+','+g+','+b+')';
+}
+/* 레이스 한 라운드 비교: 0 = 왼쪽 우세, 1 = 오른쪽 우세, -1 = 비교 불가(동률·둘 다 미출전) */
+function h2hRaceCmp(ra,rb){
+  if(!ra||!rb) return -1;
+  var fa=/^\d+$/.test(String(ra.positionText||'')),fb=/^\d+$/.test(String(rb.positionText||''));
+  if(fa&&fb){
+    var pa=num(ra.position),pb=num(rb.position);
+    if(pa&&pb&&pa!==pb) return pa<pb?0:1;
+    return -1;
+  }
+  /* 한쪽만 완주(분류)면 완주자가 앞, 둘 다 리타이어면 더 많은 랩을 돈 쪽이 앞 */
+  if(fa) return 0;
+  if(fb) return 1;
+  var la=num(ra.laps),lb=num(rb.laps);
+  if(la!==lb) return la>lb?0:1;
+  return -1;
+}
+function h2hPosTxt(row){
+  if(!row) return '—';
+  var pt=String(row.positionText||'');
+  if(/^\d+$/.test(pt)) return 'P'+pt;
+  return statusAbbr(row.status,pt)||'—';
+}
+function h2hCell(txt,hi,col){
+  if(hi) return '<span class="h2hpill" style="background:'+rgbaHex(col,.18)+';border:1px solid '+rgbaHex(col,.62)+'">'+esc(txt)+'</span>';
+  return '<span class="h2hplain'+(/^(DNF|DNS|DSQ|—)$/.test(txt)?' dim':'')+'">'+esc(txt)+'</span>';
+}
+/* 시즌 맞대결 집계 + 라운드별 표 행 데이터 */
+function h2hCompute(st,races,raceMap,qualiMap,aId,bId){
+  var out={qA:0,qB:0,rA:0,rB:0,pA:0,pB:0,fA:0,fB:0,rows:[],done:0,a:null,b:null},i,j;
+  for(i=0;i<st.drivers.length;i++){
+    if(st.drivers[i].driverId===aId) out.a=st.drivers[i];
+    if(st.drivers[i].driverId===bId) out.b=st.drivers[i];
+  }
+  for(i=0;i<races.length;i++){
+    var r=races[i];
+    if(!isDone(r)) continue;
+    out.done++;
+    var rows=raceMap[String(r.round)]||[],qrows=qualiMap[String(r.round)]||[];
+    var ra=null,rb=null,qa=null,qb=null;
+    for(j=0;j<rows.length;j++){
+      var did=(rows[j].Driver||{}).driverId;
+      if(did===aId) ra=rows[j]; else if(did===bId) rb=rows[j];
+    }
+    for(j=0;j<qrows.length;j++){
+      var qid=(qrows[j].Driver||{}).driverId;
+      if(qid===aId) qa=qrows[j]; else if(qid===bId) qb=qrows[j];
+    }
+    /* 퀄리파잉 맞대결: 두 선수 모두 예선 순위가 있는 라운드만 */
+    var qaP=qa?num(qa.position):0,qbP=qb?num(qb.position):0;
+    if(qaP>0&&qbP>0){ if(qaP<qbP) out.qA++; else if(qbP<qaP) out.qB++; }
+    /* 레이스 맞대결 */
+    if(ra&&rb){ var cmp=h2hRaceCmp(ra,rb); if(cmp===0) out.rA++; else if(cmp===1) out.rB++; }
+    /* 포디움·패스티스트 랩 */
+    if(ra){
+      var pa=num(ra.position),fa=/^\d+$/.test(String(ra.positionText||''));
+      if(fa&&pa>=1&&pa<=3) out.pA++;
+      if(num(ra.FastestLap&&ra.FastestLap.rank)===1) out.fA++;
+    }
+    if(rb){
+      var pb=num(rb.position),fb=/^\d+$/.test(String(rb.positionText||''));
+      if(fb&&pb>=1&&pb<=3) out.pB++;
+      if(num(rb.FastestLap&&rb.FastestLap.rank)===1) out.fB++;
+    }
+    out.rows.push({round:r.round,race:r,ra:ra,rb:rb,cmp:(ra&&rb)?h2hRaceCmp(ra,rb):-1});
+  }
+  return out;
+}
+function h2hPickCard(side,d,col){
+  if(!d) return '<div class="h2hc"><span class="cd">—</span></div>';
+  return '<button class="h2hc" data-act="h2hSheet" data-side="'+side+'" aria-label="'+(side==='a'?'왼쪽':'오른쪽')+' 드라이버 선택">'+
+    '<span class="bar" style="background:'+col+'"></span>'+
+    '<span class="cv">'+CARET_SVG+'</span>'+
+    '<span class="cd">'+esc(d.code||'')+'</span>'+
+    '<span class="nm">'+esc(d.full||'')+'</span>'+
+    '<span class="tm" style="color:'+col+'">'+esc(teamKo(d.teamId,d.team))+'</span></button>';
+}
+function h2hScoreRow(label,va,vb,colA,colB){
+  var tot=va+vb,pa=tot?Math.round(va/tot*100):50;
+  var onA=tot?(va>=vb):false,onB=tot?(vb>va):false;
+  var sz='font-size:16px';
+  return '<div class="h2hrow"><div class="h2htop">'+
+    '<span class="v" style="'+sz+';'+(onA?'color:#fff':'color:var(--dim)')+'">'+va+'</span>'+
+    '<span class="lb">'+label+'</span>'+
+    '<span class="v r" style="'+sz+';'+(onB?'color:#fff':'color:var(--dim)')+'">'+vb+'</span></div>'+
+    '<div class="h2hbar">'+
+      '<i style="width:'+pa+'%;background:'+(tot?colA:'#2A2F38')+'"></i>'+
+      '<i style="width:'+(100-pa)+'%;background:'+(tot?colB:'#2A2F38')+'"></i>'+
+    '</div></div>';
+}
+function renderH2H(){
+  MAIN.innerHTML=driverSeg()+skeleton(6);
+  return Promise.all([getStandings(S.year),getRaces(S.year),getSeasonMap(S.year,'race'),getSeasonMap(S.year,'quali')])
+  .then(function(res){
+    var st=res[0],races=res[1],raceMap=res[2],qualiMap=res[3];
+    var list=st.drivers||[],ids={},i;
+    for(i=0;i<list.length;i++) ids[list[i].driverId]=1;
+    if(!list.length) throw new Error(S.year+' 시즌 드라이버 데이터가 없습니다.');
+    var defA=list[0].driverId,defB=list[1]?list[1].driverId:defA;
+    if(!S.h2hA||!ids[S.h2hA]) S.h2hA=defA;
+    if(!S.h2hB||!ids[S.h2hB]) S.h2hB=defB;
+    if(S.h2hA===S.h2hB&&list.length>1) for(i=0;i<list.length;i++) if(list[i].driverId!==S.h2hA){ S.h2hB=list[i].driverId; break; }
+    var c=h2hCompute(st,races,raceMap,qualiMap,S.h2hA,S.h2hB);
+    var A=c.a,B=c.b;
+    if(!A||!B){
+      MAIN.innerHTML=driverSeg()+'<div class="card"><div class="note"><b>드라이버를 불러오지 못했습니다</b>'+S.year+' 시즌 드라이버를 다시 선택해 주세요.</div></div>';
+      return;
+    }
+    var colA=teamColor(A.teamId),colB=teamColor(B.teamId);
+    var sameTeam=!!(A.teamId&&B.teamId&&A.teamId===B.teamId);
+    var colBbar=sameTeam?mixHex(colB,.45):colB;
+    var h=driverSeg();
+    /* 상단 드라이버 선택 카드 */
+    h+='<div class="card pad"><div class="h2hpick">'+h2hPickCard('a',A,colA)+
+      '<div class="h2hvs">VS</div>'+h2hPickCard('b',B,colB)+'</div>'+
+      '<div class="h2htools"><button class="h2htool" data-act="h2hSwap">⇄ 좌우 바꾸기</button>'+
+      '<button class="h2htool" data-act="h2hMate">팀메이트로 비교</button></div></div>';
+    /* 시즌 맞대결 스코어 */
+    h+='<div class="card pad"><div class="summary"><b>시즌 맞대결 스코어</b><span class="sp"></span>'+
+      '<span class="cr">'+c.done+'R 기준</span></div>'+
+      h2hScoreRow('퀄리파잉 맞대결',c.qA,c.qB,colA,colBbar)+
+      h2hScoreRow('레이스 맞대결',c.rA,c.rB,colA,colBbar)+
+      h2hScoreRow('챔피언십 포인트',A.points,B.points,colA,colBbar)+
+      h2hScoreRow('포디움',c.pA,c.pB,colA,colBbar)+
+      h2hScoreRow('패스티스트 랩',c.fA,c.fB,colA,colBbar)+'</div>';
+    /* 라운드별 성적: 1R ~ 완료된 전체 라운드 */
+    var trs='';
+    for(i=0;i<c.rows.length;i++){
+      var row=c.rows[i];
+      var ta=h2hPosTxt(row.ra),tb=h2hPosTxt(row.rb);
+      trs+='<tr data-act="openRace" data-round="'+row.round+'" data-sess="race">'+
+        '<td class="p rd">'+row.round+'</td>'+
+        '<td class="d"><div class="gpn" style="font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px">'+esc(gpKo(row.race))+'</div>'+
+        '<div class="ln">'+esc(fmtDate(row.race.date))+'</div></td>'+
+        '<td class="ca">'+h2hCell(ta,row.cmp===0,colA)+'</td>'+
+        '<td class="cb">'+h2hCell(tb,row.cmp===1,colB)+'</td></tr>';
+    }
+    h+='<div class="card pad"><div class="summary"><b>라운드별 성적</b><span class="sp"></span>'+
+      '<span class="cr">레이스 순위</span></div>'+
+      '<table class="tbl h2ht"><thead><tr><th>R</th><th class="d">그랑프리</th>'+
+      '<th class="ca">'+esc(A.code||'')+'</th><th class="cb">'+esc(B.code||'')+'</th></tr></thead><tbody>'+
+      (trs||'<tr><td colspan="4" style="text-align:center;color:var(--dim2);padding:18px">완료된 라운드가 없습니다</td></tr>')+
+      '</tbody></table></div>';
+    h+='<div class="footnote">'+S.year+' 시즌 완료 라운드 '+c.done+'개 기준 · 두 선수 모두 예선·레이스 기록이 있는 라운드에서 맞대결 집계<br>'+
+      'DNF = 리타이어 · DNS = 불참 · DSQ = 실격 · 행을 누르면 해당 그랑프리 결과로 이동</div>';
+    MAIN.innerHTML=h;
+  }).catch(function(e){ MAIN.innerHTML=driverSeg()+errBox(e.message||String(e)); });
+}
+/* 드라이버 선택 시트 */
+var H2HSHEET=null;
+function closeH2HSheet(){
+  if(H2HSHEET&&H2HSHEET.parentNode) H2HSHEET.parentNode.removeChild(H2HSHEET);
+  H2HSHEET=null;
+  document.body.style.overflow='';
+}
+function teamMateOf(list,id){
+  var a=null,i;
+  for(i=0;i<list.length;i++) if(list[i].driverId===id) a=list[i];
+  if(!a||!a.teamId) return null;
+  for(i=0;i<list.length;i++){
+    var d=list[i];
+    if(d.driverId!==id&&d.teamId===a.teamId) return d.driverId;
+  }
+  return null;
+}
+function h2hListHTML(side,st){
+  var out='',i,d,cur=(side==='a'?S.h2hA:S.h2hB),list=st.drivers||[];
+  for(i=0;i<list.length;i++){
+    d=list[i];
+    out+='<button class="gpi'+(d.driverId===cur?' on':'')+'" data-act="h2hPick" data-side="'+side+'" data-driver="'+esc(d.driverId)+'">'+
+      '<span class="rn2">'+(d.pos?('P'+d.pos):'—')+'</span>'+
+      '<span class="mn"><span class="nm2">'+
+      '<span class="bar" style="background:'+teamColor(d.teamId)+';height:13px;width:3px;flex:0 0 3px"></span>'+
+      '<span class="g">'+esc(d.code||'')+' · '+esc(d.full||'')+'</span></span>'+
+      '<span class="sb">'+esc(teamKo(d.teamId,d.team))+' · '+d.points+' pts</span></span></button>';
+  }
+  return out;
+}
+function openH2HSheet(side){
+  closeH2HSheet();
+  var st=SEASONS[S.year]&&SEASONS[S.year].standings;
+  var wrap=document.createElement('div');
+  wrap.className='sheetwrap';
+  wrap.id='h2hSheet';
+  wrap.innerHTML='<div class="sheetbg" data-act="h2hClose"></div>'+
+    '<div class="sheet" role="dialog" aria-modal="true" aria-label="드라이버 선택">'+
+      '<div class="sheet-hd"><div class="t"><b>드라이버 선택</b>'+
+      '<span>'+S.year+' 시즌 · '+(side==='a'?'왼쪽':'오른쪽')+'</span></div>'+
+      '<button class="sheet-x" data-act="h2hClose" aria-label="닫기">✕</button></div>'+
+      '<div class="sheet-list" id="h2hList">'+(st?h2hListHTML(side,st):'<div class="note">불러오는 중…</div>')+'</div></div>';
+  document.body.appendChild(wrap);
+  document.body.style.overflow='hidden';
+  H2HSHEET=wrap;
+  if(!st){
+    getStandings(S.year).then(function(x){
+      var l=document.getElementById('h2hList');
+      if(l&&H2HSHEET===wrap) l.innerHTML=h2hListHTML(side,x);
+    },function(e){
+      var l=document.getElementById('h2hList');
+      if(l&&H2HSHEET===wrap) l.innerHTML='<div class="note"><b>불러오지 못했습니다</b>'+esc(e.message||String(e))+'</div>';
+    });
+  }
 }
 
 /* ============================ 라우팅 ============================ */
@@ -2054,6 +2314,7 @@ document.addEventListener('click',function(ev){
       BACK=[]; GRID.data=null; GRID.race=null; S.gridMode='race';
       S.year=CUR_YEAR; S.view='race'; S.session='race'; S.round=0;
       S.driverId=null; S.driverCode=null; S.standingTab='driver';
+      S.driverTab='search'; S.h2hA=null; S.h2hB=null; closeH2HSheet();
       var qEl=document.getElementById('q'); if(qEl) qEl.value='';
       render();
     }
@@ -2104,6 +2365,24 @@ document.addEventListener('click',function(ev){
       });
     }
     else if(act==='standTab'){ S.standingTab=b.getAttribute('data-tab'); render(); }
+    else if(act==='driverTab'){ S.driverTab=b.getAttribute('data-tab'); render(); }
+    else if(act==='h2hSheet'){ openH2HSheet(b.getAttribute('data-side')); }
+    else if(act==='h2hClose'){ closeH2HSheet(); }
+    else if(act==='h2hPick'){
+      var side=b.getAttribute('data-side'),pid=b.getAttribute('data-driver');
+      /* 같은 선수를 반대쪽에서 고르면 자동 스왑 */
+      if(side==='a'){ if(pid===S.h2hB){ S.h2hB=S.h2hA; } S.h2hA=pid; }
+      else { if(pid===S.h2hA){ S.h2hA=S.h2hB; } S.h2hB=pid; }
+      closeH2HSheet();
+      render();
+    }
+    else if(act==='h2hSwap'){ var sw=S.h2hA; S.h2hA=S.h2hB; S.h2hB=sw; render(); }
+    else if(act==='h2hMate'){
+      getStandings(S.year).then(function(st){
+        var mate=teamMateOf(st.drivers||[],S.h2hA);
+        if(mate){ S.h2hB=mate; render(); }
+      },function(){});
+    }
     else if(act==='gridMode'){
       S.gridMode=b.getAttribute('data-mode');
       var sb=document.getElementById('sessBody');
