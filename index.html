@@ -1848,7 +1848,7 @@ function renderDriver(){
     var racesDone=races.filter(isDone);
     var wins=0,podiums=0,poles=0,rows='',spWins=0,points=0,lastTeamId='',lastTeam='';
     var fbDob='',fbNat='';          /* 순위데이터에 생년월일·국적이 없을 때 결과 데이터에서 보충 */
-    var cells=[];
+    var cells=[],part=0;            /* part: 그 시즌에 실제로 출전한 라운드 수 */
     for(i=0;i<races.length;i++){
       var r=races[i];
       if(!isDone(r)) continue;
@@ -1866,6 +1866,7 @@ function renderDriver(){
       if(sPos===1) spWins++;
       if(qPos===1) poles++;
       points+=rPts+sPts;
+      if(rr||qq||ss) part++;
       cells.push({round:r.round,race:r,rPos:rPos,rPts:rPts,qPos:qPos,sPos:sPos,sPts:sPts,sGrid:sGrid,hasSprint:!!ss,status:rr?rr.status:'',posText:rr?rr.positionText:'',sStatus:ss?ss.status:'',sPosText:ss?ss.positionText:''});
     }
     // 그 연도에 출전 기록이 없으면(대뷔 전 시즌 등) 최신 경기로 올리지 않고 상세 화면 안에서 안내만 보여준다
@@ -1874,11 +1875,11 @@ function renderDriver(){
         errBox(S.year+' 시즌 경기 데이터를 불러오지 못했습니다.');
       return Promise.resolve();
     }
-    if(!d && !cells.length){
+    if(!d && !part){
       var nmKo=DRV_KO_FULL[did]||S.driverCode||did;
       MAIN.innerHTML='<button class="back" data-act="nav" data-view="search">‹ 검색으로</button>'+
-        '<div class="card"><div class="note"><b>'+S.year+' 시즌 출전 기록이 없습니다</b>'+
-        esc(nmKo)+' · '+S.year+' 시즌에는 출전 기록이 없습니다.<br>상단에서 다른 연도를 선택하거나 검색으로 돌아가세요.</div></div>';
+        '<div class="card"><div class="note"><b>'+S.year+' 시즌 출전 기록이 없습니다</b>'+esc(nmKo)+
+        '<br>상단에서 다른 연도를 선택하거나 검색으로 돌아가세요.</div></div>';
       return Promise.resolve();
     }
     // 팀 보정
