@@ -35,7 +35,8 @@ a{color:inherit;text-decoration:none}
 header{position:sticky;top:0;z-index:40;padding-top:calc(var(--safet) + 6px);
   background:rgba(15,16,20,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   border-bottom:1px solid rgba(255,255,255,.05)}
-.brand{display:flex;align-items:center;gap:10px;padding:11px 14px 8px}
+.brand{display:flex;align-items:center;gap:10px;padding:11px 14px 8px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.brand:active .tt h1{opacity:.72}
 .mark-img{width:34px;height:34px;border-radius:9px;flex:0 0 auto;object-fit:cover;display:block;border:1px solid rgba(255,255,255,.12)}
 .brand .tt{flex:1;min-width:0}
 .brand h1{margin:0;font-size:14px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
@@ -317,7 +318,7 @@ nav svg{color:var(--dim2)}
 </head>
 <body>
 <header>
-  <div class="brand">
+  <div class="brand" data-act="home" role="button" tabindex="0" aria-label="SIMPLY LOVELY — 처음 화면으로">
     <img class="mark-img" src="apple-touch-icon.png" alt="SIMPLY LOVELY">
     <div class="tt">
       <h1>SIMPLY LOVELY</h1>
@@ -2046,6 +2047,14 @@ document.addEventListener('click',function(ev){
   var act=b.getAttribute('data-act');
   try{
     if(act==='year'){ if(+b.getAttribute('data-year')!==S.year){ GRID.data=null; S.gridMode='race'; if(S.view==='race') BACK=[]; switchYear(+b.getAttribute('data-year')); } }
+    else if(act==='home'){
+      /* SIMPLY LOVELY 타이틀: 앱을 처음 열었을 때의 기본 화면(기본 연도·최신 경기·레이스)으로 */
+      BACK=[]; GRID.data=null; GRID.race=null; S.gridMode='race';
+      S.year=CUR_YEAR; S.view='race'; S.session='race'; S.round=0;
+      S.driverId=null; S.driverCode=null; S.standingTab='driver';
+      var qEl=document.getElementById('q'); if(qEl) qEl.value='';
+      render();
+    }
     else if(act==='nav'){
       var v=b.getAttribute('data-view');
       BACK=[];
@@ -2105,6 +2114,15 @@ document.addEventListener('click',function(ev){
 });
 document.addEventListener('input',function(ev){
   if(ev.target && ev.target.id==='q') onSearchInput(ev.target.value);
+});
+/* 타이틀은 div라 키보드 Enter/Space도 클릭으로 처리 */
+document.addEventListener('keydown',function(ev){
+  if(ev.key!=='Enter' && ev.key!==' ') return;
+  var t=ev.target;
+  if(t && t.closest && t.tagName!=='BUTTON' && t.closest('[data-act="home"]')){
+    ev.preventDefault();
+    t.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+  }
 });
 
 /* 시작 */
