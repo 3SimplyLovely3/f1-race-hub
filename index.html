@@ -1252,8 +1252,8 @@ function sessionTabs(race){
 function normRaceName(n){
   return String(n||'').toLowerCase().replace(/grand\s*prix|그랑프리/g,'').replace(/[^a-z0-9가-힣]/g,'');
 }
-/* 직전 연도(year-1) 일정에서 같은 서킷(또는 같은 그랑프리명) 경기를 찾아 그 라운드를 돌려준다. 없으면 null */
-function prevGpRound(year){
+/* 직전 연도(year-1) 일정에서 같은 서킷(또는 같은 그랑프리명) 경기를 찾아 그 경기 객체를 돌려준다. 없으면 null */
+function prevGpRace(year){
   var y=year-1;
   if(y<YEARS[YEARS.length-1]) return Promise.resolve(null);
   return Promise.all([getRaces(year),getRaces(y)]).then(function(res){
@@ -1262,14 +1262,23 @@ function prevGpRound(year){
     if(!cur) return null;
     var cid=cur.circuitId||'';
     if(cid){
-      for(i=0;i<prev.length;i++) if((prev[i].circuitId||'')===cid && isDone(prev[i])) return prev[i].round;
+      for(i=0;i<prev.length;i++) if((prev[i].circuitId||'')===cid && isDone(prev[i])) return prev[i];
     }
     var cn=normRaceName(cur.name);
     if(cn){
-      for(i=0;i<prev.length;i++) if(normRaceName(prev[i].name)===cn && isDone(prev[i])) return prev[i].round;
+      for(i=0;i<prev.length;i++) if(normRaceName(prev[i].name)===cn && isDone(prev[i])) return prev[i];
     }
     return null;
   }).catch(function(){ return null; });
+}
+function prevGpRound(year){
+  return prevGpRace(year).then(function(r){ return r?r.round:null; });
+}
+/* 이동할 경기의 주말 형식에 세션이 있으면 그대로 유지하고, 없을 때만 레이스로 폴다운 */
+function sessionFor(race,sess){
+  var tabs=sessionTabs(race),i;
+  for(i=0;i<tabs.length;i++) if(tabs[i][0]===sess) return sess;
+  return 'race';
 }
 /* 결과 카드 헤더: 제목 바로 오른쪽에 붙는 '‹ {직전연도}' 복귀 버튼(복귀 스택이 비어 있지 않을 때만) */
 function backBtn(){
@@ -1999,9 +2008,11 @@ function render(){
 function switchYear(y){
   S.year=y;
   return getRaces(y).then(function(races){
-    /* 라운드·세션은 최신 경기 탭이 쓸 값만 그 연도 최신으로 맞춰 둔다(다른 탭 화면에는 영향 없음) */
     S.round=lastDoneRound(races);
-    S.session='race';
+    /* 보던 세션(FP1·퀄리파잉·그리드 등)은 새 연도의 최신 라운드에 그 세션이 있으면 유지하고, 없을 때만 레이스 */
+    var race=null,i;
+    for(i=0;i<races.length;i++) if(races[i].round===S.round) race=races[i];
+    S.session = race ? sessionFor(race,S.session) : 'race';
     return render();
   }).catch(function(e){ renderYears(); MAIN.innerHTML=errBox(e.message||String(e)); });
 }
@@ -2045,11 +2056,12 @@ document.addEventListener('click',function(ev){
     else if(act==='tab'){ S.session=b.getAttribute('data-sess'); if(S.view!=='race'){S.view='race';} render(); }
     else if(act==='gpPick'){ openGpSheet(); }
     else if(act==='prevGp'){
-      var keep=S.session;
-      prevGpRound(S.year).then(function(rd){
-        if(rd==null) return;
-        BACK.push({year:S.year,round:S.round,session:S.session});   /* 돌아올 자리를 쌓아 둔다 */
-        S.year=S.year-1; S.round=rd; S.session=keep; S.gridMode='race';
+      var curSess=S.session, curYear=S.year, curRound=S.round;
+      prevGpRace(curYear).then(function(target){
+        if(!target) return;
+        /* 목표 주말에 지금 보던 세션이 있으면(Fp1·퀄리파잉·SQ·스프린트·그리드 등) 그 세션 그대로 이동, 없으면 레이스 */
+        BACK.push({year:curYear,round:curRound,session:curSess});   /* 돌아올 자리를 쌓아 둔다 */
+        S.year=curYear-1; S.round=target.round; S.session=sessionFor(target,curSess); S.gridMode='race';
         GRID.data=null; S.view='race';
         render();
       });
