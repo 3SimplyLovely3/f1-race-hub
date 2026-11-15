@@ -129,6 +129,7 @@ main{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:10px 12px
 
 /* ---------- tabs ---------- */
 .tabs{display:flex;gap:5px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none}
+.tabwrap{display:flex;flex:0 0 auto;gap:5px;margin:0 auto;padding:0 1px}
 .tabs::-webkit-scrollbar{display:none}
 .tab{flex:0 0 auto;padding:7px 11px;border-radius:999px;background:#171A20;border:1px solid var(--line);
   font-size:12px;font-weight:800;color:var(--dim);white-space:nowrap;transition:.15s;letter-spacing:-.01em}
@@ -186,6 +187,17 @@ main{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:10px 12px
   background:linear-gradient(180deg,#1B1E26,#181A20);font-size:11.5px;color:var(--dim)}
 .summary b{color:#fff;font-weight:900}
 .summary .sp{flex:1}
+/* 카드 상단 제목 오른쪽: 직전 연도 같은 그랑프리 결과로 가는 작은 배지 */
+.summary>span:first-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pvbg{flex:0 0 auto;display:inline-flex;align-items:center;gap:2px;padding:2px 7px;border-radius:999px;
+  border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--dim);
+  font-size:10.5px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;line-height:1.5}
+.pvbg:active{background:#232830;color:#fff;border-color:#4A505C}
+.summary .wn{display:inline-flex;align-items:center;gap:5px;min-width:0}
+.summary .wn .lb{flex:0 0 auto;color:var(--dim2);font-size:10.5px;font-weight:800;letter-spacing:0}
+.summary .wn .bar{height:12px;border-radius:2px}
+.summary .wn .nm{min-width:0;color:#fff;font-size:11.5px;font-weight:800;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .badge{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.06em;padding:2px 6px;border-radius:5px;
   vertical-align:middle;font-style:normal}
 .badge.sp{background:rgba(225,6,0,.16);color:#FF6B62;border:1px solid rgba(225,6,0,.35)}
@@ -1158,6 +1170,48 @@ function sessionTabs(race){
   if(race.sprint) return [['fp1','FP1'],['sq','SQ'],['sprint','스프린트'],['quali','퀄리파잉'],['grid','그리드'],['race','레이스']];
   return [['fp1','FP1'],['fp2','FP2'],['fp3','FP3'],['quali','퀄리파잉'],['grid','그리드'],['race','레이스']];
 }
+/* ---------- 직전 연도 동일 그랑프리 ---------- */
+function normRaceName(n){
+  return String(n||'').toLowerCase().replace(/grand\s*prix|그랑프리/g,'').replace(/[^a-z0-9가-힣]/g,'');
+}
+/* 직전 연도(year-1) 일정에서 같은 서킷(또는 같은 그랑프리명) 경기를 찾아 그 라운드를 돌려준다. 없으면 null */
+function prevGpRound(year){
+  var y=year-1;
+  if(y<YEARS[YEARS.length-1]) return Promise.resolve(null);
+  return Promise.all([getRaces(year),getRaces(y)]).then(function(res){
+    var cur=null,i,list=res[0]||[],prev=res[1]||[];
+    for(i=0;i<list.length;i++) if(String(list[i].round)===String(S.round)) cur=list[i];
+    if(!cur) return null;
+    var cid=((cur.Circuit||{}).circuitId)||'';
+    if(cid){
+      for(i=0;i<prev.length;i++) if((((prev[i].Circuit||{}).circuitId)||'')===cid && isDone(prev[i])) return prev[i].round;
+    }
+    var cn=normRaceName(cur.raceName);
+    if(cn){
+      for(i=0;i<prev.length;i++) if(normRaceName(prev[i].raceName)===cn && isDone(prev[i])) return prev[i].round;
+    }
+    return null;
+  }).catch(function(){ return null; });
+}
+/* 결과 카드 상단 제목 옆에 '2025 결과 ›' 배지 삽입(매칭되는 직전 연도 경기가 있을 때만) */
+function fillPrevBadge(){
+  var body=document.getElementById('sessBody');
+  if(!body) return;
+  var sum=body.querySelector('.summary');
+  if(!sum || sum.querySelector('.pvbg')) return;
+  var y=S.year-1;
+  prevGpRound(S.year).then(function(rd){
+    if(rd==null) return;
+    if(!document.body.contains(sum) || sum.querySelector('.pvbg')) return;
+    var b=document.createElement('button');
+    b.className='pvbg';
+    b.setAttribute('data-act','prevGp');
+    b.setAttribute('aria-label', y+' 시즌 같은 그랑프리 결과 보기');
+    b.textContent=y+' 결과 ›';
+    var sp=sum.querySelector('.sp');
+    if(sp) sum.insertBefore(b,sp); else sum.appendChild(b);
+  }).catch(function(){});
+}
 function renderRace(){
   return getRaces(S.year).then(function(races){
     var race=null,i;
@@ -1187,7 +1241,7 @@ function renderRace(){
       '<span class="meta">'+esc(race.circuit)+' · '+fmtDate(race.date)+'</span></div>'+
       '<button class="step" data-act="step" data-dir="1"'+(idx>=races.length-1?' disabled':'')+'>›</button>'+
       '</div>'+
-      '<div class="tabs">'+tabHtml+'</div>'+
+      '<div class="tabs"><div class="tabwrap">'+tabHtml+'</div></div>'+
       '<div id="sessBody">'+skeleton(5)+'</div>';
     MAIN.innerHTML=h;
     return loadSession(race);
@@ -1262,6 +1316,7 @@ function loadSession(race){
     task.then(function(data){
       if(!document.body.contains(body)) return resolve();
       body.innerHTML=sessionTable(data,race);
+      fillPrevBadge();
       resolve();
     }).catch(function(e){
       if(document.body.contains(body)) body.innerHTML=errBox(e.message||String(e));
@@ -1414,13 +1469,19 @@ function sessionLabel(k){
     k==='sprint'?'스프린트':k==='quali'?'퀄리파잉':k==='grid'?'스타팅 그리드':'레이스';
 }
 
+/* 결과 카드 상단 오른쪽: 라벨 + 팀 컬러 바 + 드라이버 영문 풀네임(코드·기록 없이) */
+function winSum(label,row){
+  if(!row) return '';
+  return '<span class="wn"><span class="lb">'+esc(label)+'</span>'+
+    '<span class="bar" style="background:'+teamColor(row.teamId)+'"></span>'+
+    '<span class="nm">'+esc(subName(row))+'</span></span>';
+}
 function raceTable(rows,race,label,dotd){
   var h='',i,row,pc,win=rows[0];
   var dIdx=(label==='레이스')?dotdWinnerIndex(rows,dotd):-1;   /* DOTD는 그랑프리 레이스에만 */
   var held=rows.some(function(r){return r.status;});
   h+='<div class="card pad"><div class="summary"><span>'+label+' 결과</span><span class="sp"></span>'+
-     '<span>우승 <b>'+esc(win.code)+'</b></span>'+
-     (win.time?'<span style="color:var(--dim2)">'+esc(win.time)+'</span>':'')+'</div>';
+     winSum('우승',win)+'</div>';
   h+='<table class="tbl"><thead><tr><th>P</th><th class="d">드라이버</th><th>랩</th><th>기록 / 상태</th><th>PTS</th></tr></thead><tbody>';
   for(i=0;i<rows.length;i++){
     row=rows[i];pc=posCell(row);
@@ -1446,8 +1507,7 @@ var COL_Q='<col style="width:34px"><col><col style="width:19.5%"><col style="wid
 function qualiTable(rows,race){
   var h='',i,row,pc,pole=rows[0];
   h+='<div class="card pad"><div class="summary"><span>퀄리파잉 결과</span><span class="sp"></span>'+
-    '<span>폴 포지션 <b>'+esc(pole.code)+'</b></span>'+
-    (pole.q3?'<span style="color:var(--dim2)">'+esc(pole.q3)+'</span>':'')+'</div>'+
+    winSum('PP',pole)+'</div>'+
     '<table class="tbl fx"><colgroup>'+COL_Q+'</colgroup><thead><tr><th>P</th><th class="d">드라이버</th><th>Q1</th><th>Q2</th><th>Q3</th></tr></thead><tbody>';
   for(i=0;i<rows.length;i++){
     row=rows[i];pc=posCell(row);
@@ -1462,7 +1522,7 @@ function qualiTable(rows,race){
 function sqTable(rows,race){
   var h='',i,row,pc,top=rows[0];
   h+='<div class="card pad"><div class="summary"><span>스프린트 퀄리파잉</span><span class="sp"></span>'+
-    '<span>스프린트 폴 <b>'+esc(top.code)+'</b></span></div>'+
+    winSum('PP',top)+'</div>'+
     '<table class="tbl fx"><colgroup>'+COL_Q+'</colgroup><thead><tr><th>P</th><th class="d">드라이버</th><th>SQ1</th><th>SQ2</th><th>SQ3</th></tr></thead><tbody>';
   for(i=0;i<rows.length;i++){
     row=rows[i];pc=posCell(row);
@@ -1477,8 +1537,7 @@ function sqTable(rows,race){
 function practiceTable(rows,race){
   var h='',i,row,pc,top=rows[0];
   h+='<div class="card pad"><div class="summary"><span>'+esc(sessionLabel(S.session))+' 기록</span><span class="sp"></span>'+
-    '<span>1위 <b>'+esc(top.code)+'</b></span>'+
-    (top.time!=null?'<span style="color:var(--dim2)">'+lapTime(top.time)+'</span>':'')+'</div>'+
+    winSum('1위',top)+'</div>'+
     '<table class="tbl fx"><colgroup>'+COL_FP+'</colgroup><thead><tr><th>P</th><th class="d">드라이버</th><th>베스트랩</th><th>갭</th><th>랩</th></tr></thead><tbody>';
   for(i=0;i<rows.length;i++){
     row=rows[i];pc=posCell(row);
@@ -1862,6 +1921,15 @@ document.addEventListener('click',function(ev){
     else if(act==='openRace'){ S.round=+b.getAttribute('data-round'); S.session='race'; S.gridMode='race'; GRID.data=null; S.view='race'; render(); }
     else if(act==='tab'){ S.session=b.getAttribute('data-sess'); if(S.view!=='race'){S.view='race';} render(); }
     else if(act==='gpPick'){ openGpSheet(); }
+    else if(act==='prevGp'){
+      var keep=S.session;
+      prevGpRound(S.year).then(function(rd){
+        if(rd==null) return;
+        S.year=S.year-1; S.round=rd; S.session=keep; S.gridMode='race';
+        GRID.data=null; S.view='race';
+        render();
+      });
+    }
     else if(act==='gpClose'){ closeGpSheet(); }
     else if(act==='gpGo'){
       var rd=+b.getAttribute('data-round');
