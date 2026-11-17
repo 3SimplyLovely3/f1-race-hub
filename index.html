@@ -211,6 +211,15 @@ main{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:10px 12px
 .note b{display:block;color:#fff;font-size:13.5px;margin-bottom:6px;font-weight:800}
 .note .kbd{display:inline-block;margin-top:10px;padding:7px 14px;border-radius:10px;background:#20242C;
   border:1px solid var(--line2);color:#fff;font-weight:800;font-size:12px}
+/* 시작 전 세션 안내 카드 */
+.pre{padding:28px 16px 32px;text-align:center}
+.pre-t{color:#fff;font-size:15px;font-weight:900;letter-spacing:-.01em}
+.pre-s{margin-top:7px;color:var(--txt);font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;opacity:.92}
+.pre-n{margin-top:7px;color:var(--dim2);font-size:11.5px}
+.cdpill{display:inline-flex;align-items:center;gap:7px;margin-top:18px;padding:8px 15px;border-radius:999px;
+  background:rgba(225,6,0,.13);border:1px solid rgba(225,6,0,.38);color:#FF8079;
+  font-size:12.5px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.cdpill .cdd{width:6px;height:6px;border-radius:50%;background:var(--red);box-shadow:0 0 0 3px rgba(225,6,0,.18);flex:0 0 6px}
 
 /* ---------- schedule list ---------- */
 .rowitem{display:flex;align-items:center;gap:7px;width:100%;padding:11px 12px;border-top:1px solid #20242B;transition:.12s}
@@ -574,6 +583,47 @@ function fmtDate(d){
   var wd=new Date(Date.UTC(p[0],p[1]-1,p[2])).getUTCDay();
   return pad2(p[1])+'.'+pad2(p[2])+' ('+'일월화수목금토'[wd]+')';
 }
+/* ---------- 세션 시작 일시(KST) ---------- */
+var KST_MS=9*3600*1000;
+/* 'YYYY-MM-DDTHH:MM:SSZ' 형태로 정규화(시간 표기가 없거나 Z가 빠져도 보정). 파싱 불가면 null */
+function normISO(v){
+  if(!v) return null;
+  var s=String(v);
+  if(!/T/.test(s)) s=s+'T00:00:00Z';
+  else if(!/(Z|[+-]\d{2}:?\d{2})$/.test(s)) s=s+'Z';
+  return isNaN(Date.parse(s))?null:s;
+}
+/* Jolpica race 객체에서 고른 세션의 시작 시각(UTC ISO). 그리드·정보 없음은 null */
+function sessionISOFromRace(race,kind){
+  if(!race) return null;
+  var f=null;
+  if(kind==='fp1') f=race.fp1;
+  else if(kind==='fp2') f=race.fp2;
+  else if(kind==='fp3') f=race.fp3;
+  else if(kind==='sq') f=race.sq;
+  else if(kind==='sprint') f=race.sp;
+  else if(kind==='quali') f=race.q;
+  else if(kind==='grid') return null;
+  else if(kind==='race') f=race.time?(race.date+'T'+race.time):(race.date+'T00:00:00Z');
+  return normISO(f);
+}
+/* UTC ISO → KST 달력 값 */
+function kstDate(iso){ var t=Date.parse(iso); return isNaN(t)?null:new Date(t+KST_MS); }
+function fmtKSTDate(iso){
+  var d=kstDate(iso); if(!d) return '';
+  return pad2(d.getUTCMonth()+1)+'.'+pad2(d.getUTCDate())+' ('+'일월화수목금토'[d.getUTCDay()]+')';
+}
+function fmtKSTTime(iso){
+  var d=kstDate(iso); if(!d) return '';
+  return pad2(d.getUTCHours())+':'+pad2(d.getUTCMinutes());
+}
+/* 헤더 서킷명 아래 날짜: 고른 세션의 시작 날짜(KST), 없으면 레이스 날짜.
+   레이스 탭은 일정 목록·배지와 같은 경기 날짜(서킷 기준 date)를 그대로 쓴다. */
+function headerDateText(race,kind){
+  if(kind==='race' || kind==='grid') return fmtDate(race.date);
+  var iso=sessionISOFromRace(race,kind);
+  return iso?fmtKSTDate(iso):fmtDate(race.date);
+}
 function lapTime(sec){
   if(sec==null||sec===''||isNaN(sec)) return '—';
   sec=+sec;
@@ -758,7 +808,7 @@ function normRace(r){
     circuitId:c.circuitId||'',circuit:c.circuitName||'',locality:loc.locality||'',country:loc.country||'',
     sprint:!!(r.Sprint||r.SprintShootout||r.SprintQualifying),
     fp1:iso(r.FirstPractice),fp2:iso(r.SecondPractice),fp3:iso(r.ThirdPractice),
-    q:iso(r.Qualifying),sp:iso(r.Sprint)
+    q:iso(r.Qualifying),sp:iso(r.Sprint),sq:iso(r.SprintQualifying||r.SprintShootout)
   };
 }
 function normRaceRow(r){
@@ -1179,6 +1229,33 @@ function meetingForRace(of1,race){
   }
   return best;
 }
+function of1SessionByKind(of1,race,kind){
+  if(!of1 || !of1.length) return null;
+  var mk=meetingForRace(of1,race);
+  if(mk==null) return null;
+  var want= kind==='fp1'?'Practice 1':kind==='fp2'?'Practice 2':kind==='fp3'?'Practice 3':
+             kind==='sprint'?'Sprint':kind==='quali'?'Qualifying':kind==='race'?'Race':null;
+  var list=of1.filter(function(s){return String(s.meeting)===String(mk) && !s.cancelled;}),i,n;
+  for(i=0;i<list.length;i++){
+    n=list[i].name||'';
+    if(kind==='sq'){ if(/Sprint Qualifying|Sprint Shootout/i.test(n)) return list[i]; }
+    else if(want && n===want) return list[i];
+  }
+  return null;
+}
+/* Jolpica에 세션 시각이 없을 때 OpenF1 sessions의 date_start를 fallback으로 */
+function of1SessionStart(race,kind){
+  if(S.year<2023) return Promise.resolve(null);
+  return getOF1(S.year).then(function(of1){
+    var s=of1SessionByKind(of1,race,kind);
+    return s?normISO(s.start):null;
+  }).catch(function(){ return null; });
+}
+function sessionStartFor(race,kind){
+  var iso=sessionISOFromRace(race,kind);
+  if(iso) return Promise.resolve(iso);
+  return of1SessionStart(race,kind);
+}
 function of1SessionResult(sessionKey,meetingKey){
   var embRows = (S.year===CACHE.year && CACHE.of1Practice && CACHE.of1Practice[String(sessionKey)]) || null;
   var embDrv  = (S.year===CACHE.year && CACHE.of1Drivers && CACHE.of1Drivers[String(meetingKey)]) || null;
@@ -1369,14 +1446,27 @@ function renderRace(){
       '<span class="rno">ROUND '+race.round+' / '+races.length+' '+badge+' '+status+'</span>'+
       '<span class="gt"><span class="nm">'+esc(gpKo(race))+'</span>'+
       '<button class="gcar" data-act="gpPick" aria-haspopup="dialog" aria-label="그랑프리 선택">'+CARET_SVG+'</button></span>'+
-      '<span class="meta">'+esc(race.circuit)+' · '+fmtDate(race.date)+'</span></div>'+
+      '<span class="meta" id="hdrMeta" data-round="'+(+race.round)+'" data-sess="'+S.session+'">'+esc(race.circuit)+' · '+esc(headerDateText(race,S.session))+'</span></div>'+
       '<button class="step" data-act="step" data-dir="1"'+(idx>=races.length-1?' disabled':'')+'>›</button>'+
       '</div>'+
       '<div class="tabs"><div class="tabwrap">'+tabHtml+'</div></div>'+
       '<div id="sessBody">'+skeleton(5)+'</div>';
     MAIN.innerHTML=h;
+    enrichHeaderDate(race);
     return loadSession(race);
   });
+}
+/* 헤더 날짜: Jolpica에 그 세션 시각이 없을 때만 OpenF1에서 채워 넣는다(화면 전환되면 버린다) */
+function enrichHeaderDate(race){
+  if(sessionISOFromRace(race,S.session)) return;
+  var rnd=String(+race.round),kind=S.session;
+  sessionStartFor(race,kind).then(function(iso){
+    if(!iso) return;
+    var el=document.getElementById('hdrMeta');
+    if(!el) return;
+    if(el.getAttribute('data-round')!==rnd || el.getAttribute('data-sess')!==kind) return;
+    el.textContent=race.circuit+' · '+fmtKSTDate(iso);
+  }).catch(function(){});
 }
 
 /* ---------- 그랑프리 빠른 선택(원클릭 점프) 바텀시트 ---------- */
@@ -1447,6 +1537,7 @@ function loadSession(race){
     task.then(function(data){
       if(!document.body.contains(body)) return resolve();
       body.innerHTML=sessionTable(data,race);
+      if(data.pre && data.startISO) startCountdown(data.startISO); else stopCountdown();
       fillPrevBadge();
       resolve();
     }).catch(function(e){
@@ -1456,15 +1547,46 @@ function loadSession(race){
   });
 }
 
+/* ---------- 시작 전 안내 카드 + 실시간 카운트다운 ---------- */
+var CD_TIMER=null;
+function stopCountdown(){ if(CD_TIMER){ clearInterval(CD_TIMER); CD_TIMER=null; } }
+function cdLeftText(ms){
+  var s=Math.floor(ms/1000);
+  var d=Math.floor(s/86400),hh=Math.floor((s%86400)/3600),mm=Math.floor((s%3600)/60),ss=s%60;
+  var out=(d>0?d+'일 ':'')+pad2(hh)+'시간 '+pad2(mm)+'분 '+pad2(ss)+'초 남음';
+  return out;
+}
+function startCountdown(startISO){
+  stopCountdown();
+  var target=Date.parse(startISO);
+  if(isNaN(target)) return;
+  var tick=function(){
+    var el=document.getElementById('cdv');
+    if(!el){ stopCountdown(); return; }        /* 화면이 바뀌면 타이머 정리 */
+    var left=target-Date.now();
+    if(left<=0){ el.textContent='지금 시작'; stopCountdown(); return; }
+    el.textContent='시작까지 '+cdLeftText(left);
+  };
+  tick();
+  CD_TIMER=setInterval(tick,1000);
+}
+function preSessionData(kind,iso){ return {kind:kind,rows:[],pre:true,startISO:iso,label:sessionLabel(kind)}; }
+
 function loadJolpicaSession(race,kind){
-  var rowsTask=getRoundRows(S.year,race.round,kind);
-  if(kind!=='race') return rowsTask.then(function(rows){ return {kind:kind,rows:rows}; });
-  return Promise.all([rowsTask,getDotdMap(S.year).catch(function(){ return {}; })]).then(function(res){
-    var map=res[1]||{};
-    return {kind:kind,rows:res[0],dotd:map[String(race.round)]||null};
+  return sessionStartFor(race,kind).then(function(startISO){
+    /* 시작 전이면 결과 API를 부르지 않고 바로 안내 카드 */
+    if(startISO && Date.parse(startISO)>Date.now()) return preSessionData(kind,startISO);
+    var rowsTask=getRoundRows(S.year,race.round,kind);
+    if(kind!=='race') return rowsTask.then(function(rows){ return {kind:kind,rows:rows}; });
+    return Promise.all([rowsTask,getDotdMap(S.year).catch(function(){ return {}; })]).then(function(res){
+      var map=res[1]||{};
+      return {kind:kind,rows:res[0],dotd:map[String(race.round)]||null};
+    });
   });
 }
 function loadOf1Session(race,kind){
+  var fromRace=sessionISOFromRace(race,kind);
+  if(fromRace && Date.parse(fromRace)>Date.now()) return Promise.resolve(preSessionData(kind,fromRace));
   return getOF1(S.year).then(function(of1){
     if(!of1.length){
       return {kind:kind,rows:[],note: S.year<2023
@@ -1481,8 +1603,16 @@ function loadOf1Session(race,kind){
     if(!sess) return {kind:kind,rows:[],note: isDone(race)
       ? '이 주말에는 해당 세션이 없습니다. (스프린트 주말은 FP1·SQ·스프린트·Q·레이스)'
       : '아직 진행되지 않은 세션입니다.'};
+    var st=normISO(sess.start),en=normISO(sess.end);
+    /* 시작 시각이 미래면 session_result를 호출하지 않고 시작 전 카드 */
+    if(st && Date.parse(st)>Date.now()) return preSessionData(kind,st);
+    var live=function(){ return !!(st && en && Date.now()<Date.parse(en)); };
     return of1SessionResult(sess.key,mk).then(function(rows){
+      if(!rows.length && live()) return {kind:kind,rows:[],inprog:true,label:sessionLabel(kind),startISO:st};
       return {kind:kind,rows:rows,session:sess};
+    },function(e){
+      if(live()) return {kind:kind,rows:[],inprog:true,label:sessionLabel(kind),startISO:st};
+      throw e;
     });
   });
 }
@@ -1586,7 +1716,9 @@ function gridTable(){
 function sessionTable(data,race){
   var kind=data.kind,rows=data.rows||[];
   if(kind==='grid') return gridTable();
+  if(data.pre) return preSessionCard(data);
   if(!rows.length){
+    if(data.inprog) return noteBox(data.label+' 진행 중','세션이 끝나면 결과가 표시됩니다.');
     return noteBox(sessionLabel(kind)+' 기록 없음', data.note||'표시할 결과가 없습니다.');
   }
   if(kind==='quali') return qualiTable(rows,race);
@@ -1594,6 +1726,17 @@ function sessionTable(data,race){
   if(kind==='sprint') return raceTable(rows,race,'스프린트');
   if(kind==='sq') return sqTable(rows,race);
   return practiceTable(rows,race,data.session);
+}
+/* 시작 전 세션 안내 카드: 제목 · 시작 일시(KST) · 안내 문구 · 실시간 카운트다운 배지 */
+function preSessionCard(data){
+  var iso=data.startISO||'',label=data.label||sessionLabel(data.kind);
+  var when=fmtKSTDate(iso)+(fmtKSTTime(iso)?' '+fmtKSTTime(iso):'')+' KST 시작';
+  return '<div class="card pad"><div class="pre">'+
+    '<div class="pre-t">'+esc(label)+' 시작 전</div>'+
+    '<div class="pre-s">'+esc(when)+'</div>'+
+    '<div class="pre-n">세션이 종료되면 결과가 표시됩니다.</div>'+
+    '<div class="cdpill"><span class="cdd"></span><span id="cdv">'+esc('시작까지 '+cdLeftText(Date.parse(iso)-Date.now()))+'</span></div>'+
+    '</div></div>';
 }
 function sessionLabel(k){
   return k==='fp1'?'FP1':k==='fp2'?'FP2':k==='fp3'?'FP3':k==='sq'?'스프린트 퀄리파잉':
@@ -2258,6 +2401,7 @@ function navActive(){
 function render(){
   renderYears();
   navActive();
+  stopCountdown();
   try{ window.scrollTo(0,0); }catch(e){}
   if(S.view==='race') return renderRace();
   if(S.view==='schedule') return renderSchedule();
