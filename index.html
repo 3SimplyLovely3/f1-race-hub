@@ -208,12 +208,15 @@ main{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:10px 12px
 .badge.up{background:#1E222A;color:var(--dim2);border:1px solid var(--line2)}
 .badge.done{background:rgba(0,210,106,.12);color:#43E08C;border:1px solid rgba(0,210,106,.28)}
 .note{padding:34px 18px;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.6}
-.note b{display:block;color:#fff;font-size:13.5px;margin-bottom:6px;font-weight:800}
+/* 안내 카드 제목: .note 안내 박스와 시작 전 카드가 같은 크기·굵기를 쓴다 */
+.note b,.pre-t{color:#fff;font-size:15px;font-weight:900;letter-spacing:-.01em}
+.note b{display:block;margin-bottom:6px}
 .note .kbd{display:inline-block;margin-top:10px;padding:7px 14px;border-radius:10px;background:#20242C;
   border:1px solid var(--line2);color:#fff;font-weight:800;font-size:12px}
+/* 그리드 없음 안내: 한국어 단어가 중간에 끊기지 않도록 */
+.note.keepall{word-break:keep-all}
 /* 시작 전 세션 안내 카드 */
 .pre{padding:28px 16px 32px;text-align:center}
-.pre-t{color:#fff;font-size:15px;font-weight:900;letter-spacing:-.01em}
 .pre-s{margin-top:7px;color:var(--txt);font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;opacity:.92}
 .pre-n{margin-top:7px;color:var(--dim2);font-size:11.5px}
 .cdpill{display:inline-flex;align-items:center;gap:7px;margin-top:18px;padding:8px 15px;border-radius:999px;
@@ -1674,7 +1677,7 @@ function gridTable(){
   var mode=(race.sprint && d.sprint && d.sprint.length && S.gridMode==='sprint')?'sprint':'race';
   var rows = mode==='sprint' ? d.sprint : d.race;
   if(!rows || !rows.length){
-    return noteBox('스타팅 그리드 없음','아직 그리드가 확정되지 않았습니다. 퀄리파잉이 끝나면 그리드가 공개됩니다.');
+    return '<div class="card"><div class="note keepall"><b>스타팅 그리드 없음</b>'+esc('아직 그리드가 확정되지 않았습니다.')+'<br>'+esc('퀄리파잉이 끝나면 그리드가 공개됩니다.')+'</div></div>';
   }
   var refMap = mode==='sprint' ? (d.sq||{}) : (d.quali||{});
   var refEmpty = !Object.keys(refMap).length;
