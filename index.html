@@ -697,7 +697,7 @@ function jget(url,tries){
   var attempt=function(n){
     return fetch(url,{headers:{'Accept':'application/json'}}).then(function(r){
       if(r.status===429){ var e=new Error('rate'); e.rate=true; throw e; }
-      if(!r.ok) throw new Error('HTTP '+r.status);
+      if(!r.ok){ var he=new Error('HTTP '+r.status); he.status=r.status; throw he; }
       return r.json();
     }).then(function(j){
       if(j && !Array.isArray(j) && j.detail) throw new Error(String(j.detail));
@@ -705,9 +705,11 @@ function jget(url,tries){
     }).catch(function(e){
       if(n<=1){
         var hint=/^file:/.test(location.protocol) ? ' 파일을 직접 열었다면 브라우저 보안 정책으로 외부 데이터를 못 불러올 수 있습니다(2026 시즌은 내장 데이터로 표시).' : '';
-        throw new Error(e.rate
+        var fe=new Error(e.rate
           ? 'API 요청이 잠시 제한되었습니다(429). 1~2분 뒤 [다시 시도]를 눌러 주세요. 이미 본 화면은 그대로 볼 수 있습니다.'+hint
           : '데이터를 불러오지 못했습니다 ('+String(url).split('/').slice(-1)[0]+').'+hint);
+        fe.status=e.status||0; fe.detail=e.message||'';
+        throw fe;
       }
       return sleep(e.rate?3200:500*(4-n)).then(function(){return attempt(n-1);});
     });
@@ -1324,8 +1326,8 @@ function errBox(msg){
   return '<div class="card"><div class="err"><b>데이터를 불러오지 못했습니다</b>'+esc(msg)+
     '<br><button class="kbd" data-act="retry">다시 시도</button></div></div>';
 }
-function noteBox(title,body,btns){
-  return '<div class="card"><div class="note"><b>'+esc(title)+'</b>'+esc(body)+(btns||'')+'</div></div>';
+function noteBox(title,body,btns,cls){
+  return '<div class="card"><div class="note'+(cls?' '+cls:'')+'"><b>'+esc(title)+'</b>'+esc(body)+(btns||'')+'</div></div>';
 }
 function driverCell(code,name,teamId,extra){
   return '<div class="drv"><span class="bar" style="background:'+teamColor(teamId)+'"></span>'+
@@ -1587,6 +1589,21 @@ function loadJolpicaSession(race,kind){
     });
   });
 }
+/* 2026 라스베이거스 GP FP1: 우천으로 플라잉 랩 없이 종료되어 공식 랩타임이 비어 있는 경우의 안내 */
+var VEGAS_FP1_TITLE='FP1 공식 기록 없음 (No times set)';
+var VEGAS_FP1_NOTE='우천으로 노면이 젖어 드라이버들이 점검 주행만 소화하고 플라잉 랩을 달리지 않아, 공식 랩타임이 기록되지 않았습니다.';
+function isVegasFp1NoTimes(race,kind,sess){
+  if(S.year!==2026 || kind!=='fp1') return false;
+  if(sess && String(sess.key)==='11413') return true;
+  return /las\s*vegas/i.test((race.circuit||'')+' '+(race.name||''));
+}
+function isNoResultErr(e){
+  if(e && e.status===404) return true;
+  return /No results found/i.test(String((e&&e.detail)||(e&&e.message)||e||''));
+}
+function vegasFp1Data(kind){
+  return {kind:kind,rows:[],title:VEGAS_FP1_TITLE,note:VEGAS_FP1_NOTE,keepall:true};
+}
 function loadOf1Session(race,kind){
   var fromRace=sessionISOFromRace(race,kind);
   if(fromRace && Date.parse(fromRace)>Date.now()) return Promise.resolve(preSessionData(kind,fromRace));
@@ -1612,9 +1629,12 @@ function loadOf1Session(race,kind){
     var live=function(){ return !!(st && en && Date.now()<Date.parse(en)); };
     return of1SessionResult(sess.key,mk).then(function(rows){
       if(!rows.length && live()) return {kind:kind,rows:[],inprog:true,label:sessionLabel(kind),startISO:st};
+      if(!rows.length && isVegasFp1NoTimes(race,kind,sess)) return vegasFp1Data(kind);
       return {kind:kind,rows:rows,session:sess};
     },function(e){
       if(live()) return {kind:kind,rows:[],inprog:true,label:sessionLabel(kind),startISO:st};
+      /* OpenF1이 결과 없음(404)을 돌려주는 경우도 빈 결과로 보고 같은 안내 */
+      if(isNoResultErr(e) && isVegasFp1NoTimes(race,kind,sess)) return vegasFp1Data(kind);
       throw e;
     });
   });
@@ -1722,7 +1742,7 @@ function sessionTable(data,race){
   if(data.pre) return preSessionCard(data);
   if(!rows.length){
     if(data.inprog) return noteBox(data.label+' 진행 중','세션이 끝나면 결과가 표시됩니다.');
-    return noteBox(sessionLabel(kind)+' 기록 없음', data.note||'표시할 결과가 없습니다.');
+    return noteBox(data.title||(sessionLabel(kind)+' 기록 없음'), data.note||'표시할 결과가 없습니다.', '', data.keepall?'keepall':'');
   }
   if(kind==='quali') return qualiTable(rows,race);
   if(kind==='race') return raceTable(rows,race,'레이스',data.dotd);
