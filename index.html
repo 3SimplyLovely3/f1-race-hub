@@ -128,6 +128,18 @@ main{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:10px 12px
    box-shadow:0 24px 70px rgba(0,0,0,.6);animation:sheetpop .2s ease both}
  .sheet:before{display:none}}
 
+/* ---------- 2026 라스베이거스 GP 그리드 페널티 사유 ---------- */
+.tbl tr.grtap:active td{background:#1E222A}
+.sheet-list.grbody{padding:12px 14px 16px}
+.grline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.grbadge{display:inline-flex;align-items:center;font-size:10.5px;font-weight:900;letter-spacing:-.01em;
+  padding:3px 8px;border-radius:7px;background:rgba(255,107,98,.16);color:#FF6B62;
+  border:1px solid rgba(255,107,98,.35);white-space:nowrap}
+.grpos{font-size:11.5px;font-weight:800;color:#D3D8DF;letter-spacing:-.01em}
+.grbox{margin-top:10px;padding:11px 12px;border-radius:12px;background:#141720;border:1px solid var(--line);
+  font-size:12.5px;line-height:1.55;color:#E9ECF1;font-weight:600;word-break:keep-all}
+.grsrc{margin-top:10px;font-size:10.5px;font-weight:700;color:var(--dim2)}
+
 /* ---------- tabs ---------- */
 .tabs{display:flex;gap:5px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none}
 .tabwrap{display:flex;flex:0 0 auto;gap:5px;margin:0 auto;padding:0 1px}
@@ -1690,6 +1702,64 @@ function deltaHtml(fromPos,toPos){
   if(d<0) return '<span class="delta dn">▼'+Math.abs(d)+'</span>';
   return '<span class="delta eq">–</span>';
 }
+/* 2026 시즌 라스베이거스 GP(21R) 레이스 스타팅 그리드 한정: 그리드 페널티 사유 */
+var GRID_REASONS={
+  '2026-21-race':{
+    ANT:{badge:'▼5 그리드 강등',q:1,grid:6,
+      reason:'파워유닛 내연기관(ICE) 6호기 교체 규정 위반으로 5그리드 페널티가 적용되었습니다.'},
+    PIA:{badge:'▼10 그리드 강등',q:7,grid:17,
+      reason:'파워유닛 내연기관(ICE) 5호기 교체(시즌 허용량 최초 초과)로 10그리드 페널티가 적용되었습니다.'},
+    SAI:{badge:'▼6 계단 하락 (10그리드 페널티)',q:14,grid:20,
+      reason:'터보차저(TC) 시즌 허용량 초과 교체로 10그리드 페널티가 적용되었습니다.'},
+    STR:{badge:'▼1 계단 하락 (10그리드 페널티)',q:20,grid:21,
+      reason:'에너지 스토어(9호기) 및 컨트롤 일렉트로닉스(8호기) 허용량 초과 교체로 10그리드 페널티가 적용되었습니다.'},
+    BEA:{badge:'35그리드 페널티',q:22,grid:22,
+      reason:'내연기관·터보차저·배기·MGU-K·보조 부품 다수 초과 교체(35그리드 페널티) 및 107% 룰 미달 스튜어드 출전 허가로 최후미 출발했습니다.'}
+  }
+};
+/* 해당 연도·라운드·레이스 그리드일 때만 사유 맵을 돌려준다(다른 그랑프리·스프린트 그리드는 영향 없음) */
+function gridReasonMap(race,mode){
+  if(!(S.year===2026 && race && +race.round===21 && mode==='race')) return null;
+  return GRID_REASONS['2026-21-race']||null;
+}
+var GRIDRSHEET=null;
+function grSheetKey(e){ if(e.key==='Escape') closeGridReasonSheet(); }
+function closeGridReasonSheet(){
+  var el=GRIDRSHEET;
+  if(!el) return;
+  GRIDRSHEET=null;
+  if(el.parentNode) el.parentNode.removeChild(el);
+  document.body.style.overflow='';
+  window.removeEventListener('keydown',grSheetKey);
+}
+function openGridReasonSheet(code){
+  var rs=gridReasonMap(GRID.race||{},'race');
+  rs=rs&&code?rs[code]:null;
+  if(!rs) return;
+  var nm='',rows=(GRID.data&&GRID.data.race)||[],i;
+  for(i=0;i<rows.length;i++){ if(rows[i].code===code){ nm=subName(rows[i]); break; } }
+  closeGridReasonSheet();
+  var wrap=document.createElement('div');
+  wrap.className='sheetwrap';
+  wrap.id='grSheet';
+  wrap.innerHTML='<div class="sheetbg" data-act="grClose"></div>'+
+    '<div class="sheet" role="dialog" aria-modal="true" aria-label="스타팅 그리드 변동 사유">'+
+      '<div class="sheet-hd"><div class="t"><b>'+esc((nm||code)+' · '+code)+'</b>'+
+      '<span>라스베이거스 GP 스타팅 그리드 변동 사유</span></div>'+
+      '<button class="sheet-x" data-act="grClose" aria-label="닫기">✕</button></div>'+
+      '<div class="sheet-list grbody">'+
+        '<div class="grline"><span class="grbadge">'+esc(rs.badge)+'</span>'+
+        '<span class="grpos">'+esc('퀄리파잉 '+rs.q+'위 → 출발 '+rs.grid+'번 그리드')+'</span></div>'+
+        '<div class="grbox">'+esc(rs.reason)+'</div>'+
+        '<div class="grsrc">출처: FIA 공식 스튜어드 발표</div>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(wrap);
+  document.body.style.overflow='hidden';
+  GRIDRSHEET=wrap;
+  window.addEventListener('keydown',grSheetKey);
+}
+
 function gridTable(){
   var d=GRID.data;
   if(!d) return '<div class="card"><div class="sk"><i></i><i></i><i></i><i></i></div></div>';
@@ -1705,6 +1775,7 @@ function gridTable(){
   var refLabel = mode==='sprint' ? 'SQ' : 'Q';
   var resLabel = mode==='sprint' ? '스프린트' : '레이스';
   var order=gridSorted(rows),h='',i;
+  var rmap=gridReasonMap(race,mode);
   var head='';
   if(race.sprint){
     head='<div class="seg mini" style="margin:0 0 10px">'+
@@ -1724,10 +1795,13 @@ function gridTable(){
     var res=row.pos?String(row.pos):(row.posText&&row.posText!=='-'?esc(row.posText):'—');
     var gnum=+row.grid>0?+row.grid:0;
     var cls=gnum===1?'p1':gnum===2?'p2':gnum===3?'p3':'';
-    h+='<tr class="'+cls+'"><td class="p" style="width:44px;font-size:12.5px">'+g+'</td>'+
+    var rs=rmap&&row.code?rmap[row.code]:null;
+    h+='<tr class="'+cls+(rs?' grtap':'')+'"'+(rs?' style="cursor:pointer" data-act="gridReason" data-code="'+esc(row.code)+'"':'')+'>'+
+      '<td class="p" style="width:44px;font-size:12.5px">'+g+'</td>'+
       '<td class="d">'+driverCell(row.code,subName(row),row.teamId)+'</td>'+
       '<td style="color:var(--dim)">'+(qp||'—')+'</td>'+
-      '<td>'+(mode==='sprint'&&refEmpty?'<span class="delta eq">—</span>':deltaHtml(qp,+row.grid>0?+row.grid:rows.length))+'</td>'+
+      '<td>'+(mode==='sprint'&&refEmpty?'<span class="delta eq">—</span>':deltaHtml(qp,+row.grid>0?+row.grid:rows.length))+
+        (rs?'<span style="font-size:9px;opacity:.75;margin-left:2px">ⓘ</span>':'')+'</td>'+
       '<td style="font-weight:800">'+res+'</td></tr>';
   }
   h+='</tbody></table></div>';
@@ -2550,6 +2624,8 @@ document.addEventListener('click',function(ev){
         if(mate){ S.h2hB=mate; render(); }
       },function(){});
     }
+    else if(act==='gridReason'){ openGridReasonSheet(b.getAttribute('data-code')); }
+    else if(act==='grClose'){ closeGridReasonSheet(); }
     else if(act==='gridMode'){
       S.gridMode=b.getAttribute('data-mode');
       var sb=document.getElementById('sessBody');
