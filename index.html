@@ -128,17 +128,20 @@ main{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:10px 12px
    box-shadow:0 24px 70px rgba(0,0,0,.6);animation:sheetpop .2s ease both}
  .sheet:before{display:none}}
 
-/* ---------- 2026 라스베이거스 GP 그리드 페널티 사유 ---------- */
+/* ---------- 2026 라스베이거스 GP 그리드 페널티 사유(1번 안: 행 바로 아래 아코디언) ---------- */
+.tbl tr.grtap{cursor:pointer}
 .tbl tr.grtap:active td{background:#1E222A}
-.sheet-list.grbody{padding:12px 14px 16px}
-.grline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.grbadge{display:inline-flex;align-items:center;font-size:10.5px;font-weight:900;letter-spacing:-.01em;
-  padding:3px 8px;border-radius:7px;background:rgba(255,107,98,.16);color:#FF6B62;
-  border:1px solid rgba(255,107,98,.35);white-space:nowrap}
-.grpos{font-size:11.5px;font-weight:800;color:#D3D8DF;letter-spacing:-.01em}
-.grbox{margin-top:10px;padding:11px 12px;border-radius:12px;background:#141720;border:1px solid var(--line);
-  font-size:12.5px;line-height:1.55;color:#E9ECF1;font-weight:600;word-break:keep-all}
-.grsrc{margin-top:10px;font-size:10.5px;font-weight:700;color:var(--dim2)}
+.tbl tr.gropen td{background:rgba(255,107,98,.08)}
+.tbl tr.grid-reason-row td{border-top:none;text-align:left;padding:2px 10px 10px 44px;
+  background:rgba(255,107,98,.05)}
+.gracc{background:#1A1D24;border:1px solid rgba(255,107,98,.35);border-radius:10px;padding:9px 11px;
+  font-size:12px;line-height:1.45;color:#E8ECF2;text-align:left}
+.gracc .grl1{display:flex;align-items:center;gap:6px;flex-wrap:wrap;text-align:left}
+.gracc .grb{display:inline-flex;align-items:center;font-size:10.5px;font-weight:900;letter-spacing:-.01em;
+  padding:3px 7px;border-radius:7px;background:rgba(255,107,98,.18);color:#FF6B62;white-space:nowrap}
+.gracc .grp{font-size:11.5px;font-weight:800;color:#D3D8DF;letter-spacing:-.01em}
+.gracc .grr{margin-top:5px;text-align:left;word-break:keep-all}
+.gracc .grsrc{margin-top:4px;font-size:10.5px;color:#7C8594;font-weight:700;text-align:left}
 
 /* ---------- tabs ---------- */
 .tabs{display:flex;gap:5px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none}
@@ -1722,46 +1725,46 @@ function gridReasonMap(race,mode){
   if(!(S.year===2026 && race && +race.round===21 && mode==='race')) return null;
   return GRID_REASONS['2026-21-race']||null;
 }
-var GRIDRSHEET=null;
-function grSheetKey(e){ if(e.key==='Escape') closeGridReasonSheet(); }
-function closeGridReasonSheet(){
-  var el=GRIDRSHEET;
-  if(!el) return;
-  GRIDRSHEET=null;
-  if(el.parentNode) el.parentNode.removeChild(el);
-  document.body.style.overflow='';
-  window.removeEventListener('keydown',grSheetKey);
+/* 행 바로 아래 펼쳐지는 아코디언(1번 안): 한 번에 하나만 열린다 */
+var GRIDOPEN=null;
+function closeGridReasonAcc(){
+  var op=document.querySelector('table.tbl tr.gropen');
+  while(op){
+    if(op.getAttribute('aria-expanded')==='true') op.setAttribute('aria-expanded','false');
+    op.classList.remove('gropen');
+    op=document.querySelector('table.tbl tr.gropen');
+  }
+  var ex=document.querySelector('table.tbl tr.grid-reason-row');
+  while(ex){ if(ex.parentNode) ex.parentNode.removeChild(ex); ex=document.querySelector('table.tbl tr.grid-reason-row'); }
+  GRIDOPEN=null;
 }
-function openGridReasonSheet(code){
-  var rs=gridReasonMap(GRID.race||{},'race');
-  rs=rs&&code?rs[code]:null;
+function toggleGridReason(tr){
+  if(!tr) return;
+  var code=tr.getAttribute('data-code')||'';
+  var map=gridReasonMap(GRID.race||{},'race'),rs=map?map[code]:null;
   if(!rs) return;
-  var nm='',rows=(GRID.data&&GRID.data.race)||[],i;
-  for(i=0;i<rows.length;i++){ if(rows[i].code===code){ nm=subName(rows[i]); break; } }
-  closeGridReasonSheet();
-  var wrap=document.createElement('div');
-  wrap.className='sheetwrap';
-  wrap.id='grSheet';
-  wrap.innerHTML='<div class="sheetbg" data-act="grClose"></div>'+
-    '<div class="sheet" role="dialog" aria-modal="true" aria-label="스타팅 그리드 변동 사유">'+
-      '<div class="sheet-hd"><div class="t"><b>'+esc((nm||code)+' · '+code)+'</b>'+
-      '<span>라스베이거스 GP 스타팅 그리드 변동 사유</span></div>'+
-      '<button class="sheet-x" data-act="grClose" aria-label="닫기">✕</button></div>'+
-      '<div class="sheet-list grbody">'+
-        '<div class="grline"><span class="grbadge">'+esc(rs.badge)+'</span>'+
-        '<span class="grpos">'+esc('퀄리파잉 '+rs.q+'위 → 출발 '+rs.grid+'번 그리드')+'</span></div>'+
-        '<div class="grbox">'+esc(rs.reason)+'</div>'+
+  var wasOpen=(GRIDOPEN===code && tr.classList.contains('gropen'));
+  closeGridReasonAcc();
+  if(wasOpen) return;
+  var row=document.createElement('tr');
+  row.className='grid-reason-row';
+  row.innerHTML='<td colspan="5" style="text-align:left;padding:2px 10px 10px 44px;border-top:none;background:rgba(255,107,98,0.05)">'+
+      '<div class="gracc">'+
+        '<div class="grl1"><span class="grb">'+esc(rs.badge)+'</span>'+
+        '<span class="grp">'+esc('퀄리파잉 '+rs.q+'위 → 출발 '+rs.grid+'번 그리드')+'</span></div>'+
+        '<div class="grr">'+esc(rs.reason)+'</div>'+
         '<div class="grsrc">출처: FIA 공식 스튜어드 발표</div>'+
-      '</div>'+
-    '</div>';
-  document.body.appendChild(wrap);
-  document.body.style.overflow='hidden';
-  GRIDRSHEET=wrap;
-  window.addEventListener('keydown',grSheetKey);
+      '</div></td>';
+  if(!tr.parentNode) return;
+  tr.parentNode.insertBefore(row,tr.nextSibling);
+  tr.classList.add('gropen');
+  if(tr.getAttribute('aria-expanded')==='false') tr.setAttribute('aria-expanded','true');
+  GRIDOPEN=code;
 }
 
 function gridTable(){
   var d=GRID.data;
+  GRIDOPEN=null; /* 그리드 표가 새로 그려지면 아코디언은 모두 닫힌 상태로 시작 */
   if(!d) return '<div class="card"><div class="sk"><i></i><i></i><i></i><i></i></div></div>';
   var race=GRID.race||{};
   var mode=(race.sprint && d.sprint && d.sprint.length && S.gridMode==='sprint')?'sprint':'race';
@@ -1796,7 +1799,7 @@ function gridTable(){
     var gnum=+row.grid>0?+row.grid:0;
     var cls=gnum===1?'p1':gnum===2?'p2':gnum===3?'p3':'';
     var rs=rmap&&row.code?rmap[row.code]:null;
-    h+='<tr class="'+cls+(rs?' grtap':'')+'"'+(rs?' style="cursor:pointer" data-act="gridReason" data-code="'+esc(row.code)+'"':'')+'>'+
+    h+='<tr class="'+cls+(rs?' grtap':'')+'"'+(rs?' style="cursor:pointer" data-act="gridReason" data-code="'+esc(row.code)+'" aria-expanded="false"':'')+'>'+
       '<td class="p" style="width:44px;font-size:12.5px">'+g+'</td>'+
       '<td class="d">'+driverCell(row.code,subName(row),row.teamId)+'</td>'+
       '<td style="color:var(--dim)">'+(qp||'—')+'</td>'+
@@ -2624,8 +2627,7 @@ document.addEventListener('click',function(ev){
         if(mate){ S.h2hB=mate; render(); }
       },function(){});
     }
-    else if(act==='gridReason'){ openGridReasonSheet(b.getAttribute('data-code')); }
-    else if(act==='grClose'){ closeGridReasonSheet(); }
+    else if(act==='gridReason'){ toggleGridReason(b); }
     else if(act==='gridMode'){
       S.gridMode=b.getAttribute('data-mode');
       var sb=document.getElementById('sessBody');
