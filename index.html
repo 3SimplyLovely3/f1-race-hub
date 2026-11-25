@@ -1705,8 +1705,145 @@ function deltaHtml(fromPos,toPos){
   if(d<0) return '<span class="delta dn">▼'+Math.abs(d)+'</span>';
   return '<span class="delta eq">–</span>';
 }
-/* 2026 시즌 라스베이거스 GP(21R) 레이스 스타팅 그리드 한정: 그리드 페널티 사유 */
+/* 시즌-라운드-그리드종류(race|sprint) 키로 관리하는 스타팅 그리드 변동 사유.
+   공식 FIA 스튜어드 발표·F1 공식 그리드에서 확인된 드라이버만 넣는다. */
 var GRID_REASONS={
+  /* 2026 R2 중국 상하이 */
+  '2026-2-race':{
+    ALB:{badge:'▼4 계단 하락 (피트레인 출발)',q:18,grid:22,
+      reason:'윌리엄스가 파르크 페르메 기간에 서스펜션 셋업을 변경해(규정 B3.5.7 위반) 피트레인에서 출발했습니다.'}
+  },
+  '2026-2-sprint':{
+    ALB:{badge:'▼4 계단 하락 (피트레인 출발)',q:18,grid:22,
+      reason:'파르크 페르메 기간에 서스펜션 셋업을 변경해(규정 B3.5.7 위반) 스프린트를 피트레인에서 출발했습니다.'}
+  },
+  /* 2026 R4 마이애미 */
+  '2026-4-sprint':{
+    LIN:{badge:'▼7 계단 하락 (피트레인 출발)',q:15,grid:22,
+      reason:'스프린트 퀄리파잉 뒤 커버 온 시각이 지난 뒤에도 차량 작업을 계속해(규정 B3.4.2a 위반) 피트레인 출발이 지정됐고, 출발 전 기술 문제로 스프린트에 나서지 못했습니다.'}
+  },
+  /* 2026 R5 캐나다 */
+  '2026-5-race':{
+    STR:{badge:'▼1 계단 하락 (피트레인 출발)',q:21,grid:22,
+      reason:'4번째 에너지 스토어와 4번째 컨트롤 일렉트로닉스 유닛을 FIA 기술 대표 승인 없이 파르크 페르메 중 교체해(규정 B3.5.3) 피트레인에서 출발했습니다.'}
+  },
+  '2026-5-sprint':{
+    BEA:{badge:'피트레인 출발',q:15,grid:19,
+      reason:'파르크 페르메 기간에 차량 셋업을 기술 대표 승인 없이 변경해 스프린트를 피트레인에서 출발했습니다.'},
+    GAS:{badge:'피트레인 출발',q:19,grid:20,
+      reason:'파르크 페르메 기간에 차량 셋업을 기술 대표 승인 없이 변경하고 커버 온 시각을 넘겨 작업해 스프린트를 피트레인에서 출발했습니다.'},
+    BOT:{badge:'피트레인 출발',q:20,grid:21,
+      reason:'파르크 페르메 기간에 차량 셋업을 기술 대표 승인 없이 변경해 스프린트를 피트레인에서 출발했습니다.'}
+  },
+  /* 2026 R9 영국 실버스톤 */
+  '2026-9-race':{
+    GAS:{badge:'▼3 그리드 강등',q:12,grid:15,
+      reason:'Q1에서 랜스 스트롤의 랩을 방해(임피딩)해 3그리드 페널티를 받았습니다.'},
+    STR:{badge:'▼1 계단 하락 (10그리드 페널티)',q:21,grid:22,
+      reason:'시즌 허용량을 넘긴 5번째 에너지 스토어와 5번째 컨트롤 일렉트로닉스 유닛을 사용해 10그리드 페널티를 받았습니다.'}
+  },
+  '2026-9-sprint':{
+    ALB:{badge:'▼6 계단 하락 (피트레인 출발)',q:16,grid:22,
+      reason:'파르크 페르메 기간에 서스펜션 셋업을 기술 대표 승인 없이 변경해 스프린트를 피트레인에서 출발했습니다.'}
+  },
+  /* 2026 R10 벨기에 스파 */
+  '2026-10-race':{
+    HAD:{badge:'▼11 계단 하락 (30그리드 페널티)',q:10,grid:21,
+      reason:'5번째 내연기관(ICE)·터보차저·배기 세트를 사용해 30그리드 페널티가 적용돼 최후미로 밀렸습니다.'},
+    NOR:{badge:'▼10 그리드 강등',q:3,grid:13,
+      reason:'시즌 허용량을 넘긴 4번째 컨트롤 일렉트로닉스 유닛(PU-CE)을 사용해 10그리드 페널티를 받았습니다.'},
+    SAI:{badge:'▼4 계단 하락 (10그리드 페널티)',q:15,grid:19,
+      reason:'예선 뒤 배터리(에너지 스토어)와 4번째 컨트롤 일렉트로닉스 유닛을 교체하며 허용량을 초과해 10그리드 페널티를 받았습니다.'},
+    ALO:{badge:'▼1 계단 하락 (20그리드 페널티)',q:21,grid:22,
+      reason:'5번째 에너지 스토어·5번째 컨트롤 일렉트로닉스·7번째 파워유닛 보조 부품을 사용해 20그리드 페널티가 적용됐습니다.'}
+  },
+  /* 2026 R11 헝가리 */
+  '2026-11-race':{
+    ANT:{badge:'▼3 그리드 강등',q:4,grid:7,
+      reason:'Q3에서 막스 베르스타펜의 스핀으로 나온 옐로 플래그 구간에서 충분히 감속하지 않아 3그리드 페널티를 받았습니다.'},
+    HAM:{badge:'▼3 그리드 강등',q:2,grid:5,
+      reason:'Q3 마지막 랩에서 오스카 피아스트리의 푸시 랩을 방해(임피딩)해 3그리드 페널티를 받았습니다.'}
+  },
+  /* 2026 R12 네덜란드 잔드포르트 */
+  '2026-12-sprint':{
+    SAI:{badge:'▼3 계단 하락 (피트레인 출발)',q:18,grid:21,
+      reason:'파르크 페르메 중 서스펜션 셋업을 기술 대표 승인 없이 변경해(규정 B3.5.3·B3.5.4) 스프린트를 피트레인에서 출발했습니다.'}
+  },
+  /* 2026 R13 이탈리아 몬차 */
+  '2026-13-race':{
+    ANT:{badge:'▼12 계단 하락 (30그리드 페널티)',q:7,grid:19,
+      reason:'5번째 내연기관·4번째 에너지 스토어·4번째 컨트롤 일렉트로닉스 유닛을 사용해 30그리드 페널티가 적용됐고, 피트레인에서 출발했습니다.'},
+    PIA:{badge:'▼3 그리드 강등',q:3,grid:6,
+      reason:'Q2에서 리암 로슨을 방해(임피딩)해 3그리드 페널티를 받았습니다.'},
+    LAW:{badge:'▼8 계단 하락 (35그리드 페널티)',q:14,grid:22,
+      reason:'파워유닛 요소를 허용량 이상 사용해 35그리드 페널티가 적용됐고, 파르크 페르메 중 리어윙과 서스펜션을 변경해 피트레인에서 출발했습니다.'},
+    ALB:{badge:'▼2 계단 하락 (20그리드 페널티)',q:18,grid:20,
+      reason:'5번째 내연기관과 4번째 컨트롤 일렉트로닉스 유닛을 사용해 20그리드 페널티를 받았습니다.'}
+  },
+  /* 2026 R14 스페인 마드리드 */
+  '2026-14-race':{
+    SAI:{badge:'▼3 그리드 강등',q:17,grid:20,
+      reason:'Q1에서 발테리 보타스의 랩을 방해(임피딩)해 3그리드 페널티를 받았습니다.'}
+  },
+  /* 2026 R15 아제르바이잔 바쿠 */
+  '2026-15-race':{
+    SAI:{badge:'▼5 그리드 강등',q:9,grid:14,
+      reason:'예선에서 옐로 플래그 구간에서 충분히 감속하지 않아 5그리드 페널티를 받았습니다.'},
+    ALO:{badge:'▼2 계단 하락 (30그리드 페널티)',q:19,grid:21,
+      reason:'내연기관·터보차저 등 파워유닛 요소 추가 사용(25그리드)에 파워유닛 전체 교체(+5)가 더해져 30그리드 페널티가 적용됐습니다.'},
+    STR:{badge:'▼1 계단 하락 (20그리드 페널티)',q:21,grid:22,
+      reason:'터보차저·에너지 스토어·컨트롤 일렉트로닉스와 파워유닛 보조 부품을 추가 사용해 20그리드 페널티를 받았습니다.'}
+  },
+  /* 2026 R16 말레이시아 세팡 (바레인 GP) */
+  '2026-16-race':{
+    HAD:{badge:'▼5 그리드 강등',q:3,grid:8,
+      reason:'7번째 내연기관(ICE)을 사용해 허용량을 넘겨 5그리드 페널티를 받았습니다.'},
+    LIN:{badge:'▼6 계단 하락 (30그리드 페널티)',q:16,grid:22,
+      reason:'5번째 내연기관·터보차저·배기 세트를 사용해 30그리드 페널티가 적용돼 최후미에서 출발했습니다.'},
+    COL:{badge:'▼6 계단 하락 (15그리드 페널티)',q:15,grid:21,
+      reason:'아제르바이잔에서 일으킨 충돌로 받은 5그리드 페널티에 5번째 내연기관 사용 10그리드 페널티가 더해져 15그리드 페널티를 받았습니다.'}
+  },
+  /* 2026 R17 싱가포르 */
+  '2026-17-race':{
+    RUS:{badge:'▼13 계단 하락 (60그리드 페널티)',q:6,grid:19,
+      reason:'파워유닛 요소를 대거 새로 장착하며 허용량을 크게 초과해 60그리드 페널티가 적용됐습니다.'},
+    ALO:{badge:'▼3 계단 하락 (피트레인 출발)',q:17,grid:20,
+      reason:'파르크 페르메 중 서스펜션 셋업을 변경하고 파워유닛 요소(터보차저)를 추가 사용해 피트레인에서 출발했습니다.'},
+    STR:{badge:'▼2 계단 하락 (피트레인 출발)',q:19,grid:21,
+      reason:'파르크 페르메 중 서스펜션 셋업을 변경해 피트레인에서 출발했습니다.'}
+  },
+  /* 2026 R18 미국 오스틴 */
+  '2026-18-race':{
+    LIN:{badge:'▼5 그리드 강등',q:9,grid:14,
+      reason:'6번째 내연기관(ICE)을 사용해 허용량을 넘겨 5그리드 페널티를 받았습니다.'},
+    BOR:{badge:'▼8 계단 하락 (80그리드 페널티)',q:13,grid:21,
+      reason:'파워유닛 요소를 대거 교체하며 80그리드 페널티가 적용돼 최후미로 밀렸습니다.'},
+    STR:{badge:'▼4 계단 하락 (피트레인 출발)',q:18,grid:22,
+      reason:'예선 뒤 새 파워유닛과 셋업 변경으로 피트레인에서 출발했습니다.'},
+    COL:{badge:'▼6 계단 하락 (10그리드 페널티)',q:14,grid:20,
+      reason:'4번째 컨트롤 일렉트로닉스 유닛을 사용해 10그리드 페널티를 받았습니다.'}
+  },
+  /* 2026 R19 멕시코시티 */
+  '2026-19-race':{
+    VER:{badge:'▼1 그리드 강등',q:4,grid:5,
+      reason:'FP2에서 리암 로슨과의 접촉 사고로 1그리드 페널티를 받았습니다.'}
+  },
+  /* 2026 R20 상파울루 인터라고스 */
+  '2026-20-race':{
+    VER:{badge:'▼5 계단 하락 (30그리드 페널티)',q:16,grid:21,
+      reason:'내연기관·터보차저·배기를 허용량 이상 사용해 30그리드 페널티가 적용됐습니다.'},
+    RUS:{badge:'▼5 그리드 강등',q:2,grid:7,
+      reason:'추가 파워유닛 요소를 사용해 5그리드 페널티를 받았습니다.'},
+    LEC:{badge:'▼10 그리드 강등',q:4,grid:14,
+      reason:'시즌 허용량을 넘긴 내연기관(ICE)을 사용해 10그리드 페널티를 받았습니다.'},
+    HAM:{badge:'▼9 계단 하락 (75그리드 페널티)',q:11,grid:20,
+      reason:'FP3에서 새 엔진에 문제가 생겨 파워유닛 전체를 다시 교체하며 75그리드 페널티가 적용됐습니다.'},
+    LIN:{badge:'▼4 계단 하락 (10그리드 페널티)',q:14,grid:18,
+      reason:'새 내연기관과 터보차저를 사용해 10그리드 페널티를 받았습니다.'},
+    PER:{badge:'▼1 계단 하락 (30그리드 페널티)',q:21,grid:22,
+      reason:'내연기관·터보차저·MGU-K를 허용량 이상 사용해 30그리드 페널티가 적용됐습니다.'}
+  },
+  /* 2026 R21 라스베이거스 */
   '2026-21-race':{
     ANT:{badge:'▼5 그리드 강등',q:1,grid:6,
       reason:'파워유닛 내연기관(ICE) 6호기 교체 규정 위반으로 5그리드 페널티가 적용되었습니다.'},
@@ -1720,10 +1857,20 @@ var GRID_REASONS={
       reason:'내연기관·터보차저·배기·MGU-K·보조 부품 다수 초과 교체(35그리드 페널티) 및 107% 룰 미달 스튜어드 출전 허가로 최후미 출발했습니다.'}
   }
 };
-/* 해당 연도·라운드·레이스 그리드일 때만 사유 맵을 돌려준다(다른 그랑프리·스프린트 그리드는 영향 없음) */
+/* '연도-라운드-race|sprint' 키. 어느 시즌·어느 그랑프리든 같은 규칙으로 조회한다 */
+function gridReasonKey(race,mode){
+  if(!race || race.round==null || race.round==='' || !mode) return null;
+  return String(S.year)+'-'+String(race.round)+'-'+mode;
+}
+/* 현재 연도·라운드·그리드 종류에 해당하는 사유 맵(없으면 null) */
 function gridReasonMap(race,mode){
-  if(!(S.year===2026 && race && +race.round===21 && mode==='race')) return null;
-  return GRID_REASONS['2026-21-race']||null;
+  var k=gridReasonKey(race,mode);
+  return k ? (GRID_REASONS[k]||null) : null;
+}
+/* 지금 표에 그려진 그리드 종류 */
+function currentGridMode(){
+  var d=GRID.data,r=GRID.race||{};
+  return (r.sprint && d && d.sprint && d.sprint.length && S.gridMode==='sprint')?'sprint':'race';
 }
 /* 행 바로 아래 펼쳐지는 아코디언(1번 안): 한 번에 하나만 열린다 */
 var GRIDOPEN=null;
@@ -1741,7 +1888,8 @@ function closeGridReasonAcc(){
 function toggleGridReason(tr){
   if(!tr) return;
   var code=tr.getAttribute('data-code')||'';
-  var map=gridReasonMap(GRID.race||{},'race'),rs=map?map[code]:null;
+  var gmode=currentGridMode();
+  var map=gridReasonMap(GRID.race||{},gmode),rs=map?map[code]:null;
   if(!rs) return;
   var wasOpen=(GRIDOPEN===code && tr.classList.contains('gropen'));
   closeGridReasonAcc();
@@ -1751,7 +1899,7 @@ function toggleGridReason(tr){
   row.innerHTML='<td colspan="5" style="text-align:left;padding:2px 10px 10px 44px;border-top:none;background:rgba(255,107,98,0.05)">'+
       '<div class="gracc">'+
         '<div class="grl1"><span class="grb">'+esc(rs.badge)+'</span>'+
-        '<span class="grp">'+esc('퀄리파잉 '+rs.q+'위 → 출발 '+rs.grid+'번 그리드')+'</span></div>'+
+        '<span class="grp">'+esc((gmode==='sprint'?'스프린트 퀄리파잉 ':'퀄리파잉 ')+rs.q+'위 → 출발 '+rs.grid+'번 그리드')+'</span></div>'+
         '<div class="grr">'+esc(rs.reason)+'</div>'+
         '<div class="grsrc">출처: FIA 공식 스튜어드 발표</div>'+
       '</div></td>';
